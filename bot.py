@@ -2,8 +2,7 @@
 import telebot
 from telebot import types
 import json
-import os
- "8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ# <-- Your bot token WITH quotes
+import os "8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ# <-- Your bot token WITH quotes
 ADMIN_ID = 8930135604  # <-- Your Telegram ID WITHOUT quotes
  bot = telebot.TeleBot(TOKEN) # <-- THIS IS THE CORRECT ONE
 # YOUR TAPBUMBER BANNER - NOW WORKING

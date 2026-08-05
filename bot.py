@@ -3,9 +3,8 @@ import telebot
 from telebot import types
 import json
 import os
-
-TOKEN = "8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ" # No quotes around TOKEN variable
-ADMIN_ID= "8930135604":AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ= 
+ "8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ# <-- Your bot token WITH quotes
+ADMIN_ID = 8930135604  # <-- Your Telegram ID WITHOUT quotes
  bot = telebot.TeleBot(TOKEN) # <-- THIS IS THE CORRECT ONE
 # YOUR TAPBUMBER BANNER - NOW WORKING
 BANNER_URL = "https://vault.pictures/p/e861c73e682e45ec8d343afa3a296ad5"

@@ -2,7 +2,7 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = 8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ
 ADMIN_ID =  8930135604 # CHANGE THIS TO YOUR TELEGRAM ID
 
 users = {}  # user_id: {coins, activated, referred_by}

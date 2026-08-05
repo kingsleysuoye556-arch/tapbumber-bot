@@ -99,6 +99,12 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users[user_id]['coins'] += 5
     await update.message.reply_text(f"✅ +5 Coins for photo!\nTotal: {users[user_id]['coins']}")
 
+
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("❌ You are not admin")
+        return
+    await update.message.reply_text(f"📊 Users: {len(users)}\nCoins: {sum(u['coins'] for u in users.values())}")
 def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))

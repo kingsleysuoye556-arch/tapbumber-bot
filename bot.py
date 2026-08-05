@@ -99,17 +99,39 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users[user_id]['coins'] += 5
     await update.message.reply_text(f"✅ +5 Coins for photo!\nTotal: {users[user_id]['coins']}")
 
-
 async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    user_id = update.effective_user.id
+    
+    # Security: Only you can use this
+    if user_id != ADMIN_ID:
         await update.message.reply_text("❌ You are not admin")
         return
-    await update.message.reply_text(f"📊 Users: {len(users)}\nCoins: {sum(u['coins'] for u in users.values())}")
+    
+    total_users = len(users)
+    activated_users = sum(1 for u in users.values() if u['activated'])
+    total_coins = sum(u['coins'] for u in users.values())
+    
+    await update.message.reply_text(
+        f"📊 ADMIN DASHBOARD\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"👥 Total Users: {total_users}\n"
+        f"✅ Activated: {activated_users}\n"
+        f"💰 Total Coins: {total_coins}\n"
+        f"💵 Potential Payout: {total_coins/10} Naira"
+    )
+
 def main():
     app = Application.builder().token(TOKEN).build()
+    
+    # COMMANDS
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("admin", admin))  # <-- ADMIN COMMAND ADDED
+    
+    # BUTTONS + PHOTOS
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
+    
+    print("Bot is running...")
     app.run_polling()
 
 if __name__ == "__main__":

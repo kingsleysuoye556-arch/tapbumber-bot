@@ -136,3 +136,17 @@ def main():
 
 if __name__ == "__main__":
     main()
+# ... your other functions like start, button, photo_handler
+
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):  # <-- PASTE HERE
+    user_id = update.effective_user.id
+    if user_id != ADMIN_ID:
+        await update.message.reply_text("❌ You are not admin")
+        return
+    ...
+
+def main():  # <-- main dey here
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("admin", admin))  # <-- AND ADD THIS LINE HERE
+    ...

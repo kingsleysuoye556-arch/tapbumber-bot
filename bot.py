@@ -47,7 +47,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         users[uid] = {"balance": 0, "activated": False, "referrals": 0}
         save_db(users)
     status = "Activated ✅" if users[uid]["activated"] else "Not Activated ❌"
-    await await update.message.reply_text(
+     await update.message.reply_text(
     f"Tapped! +1 coin\n\nTotal: {users[uid]['balance']}",
     reply_markup=keyboard
 )

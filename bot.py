@@ -150,3 +150,96 @@ def main():  # <-- main dey here
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("admin", admin))  # <-- AND ADD THIS LINE HERE
     ...
+import asyncio
+import json
+import os
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+
+TOKEN = "PASTE_YOUR_BOTFATHER_TOKEN_HERE"
+ADMIN_ID = 8930135604 # YOUR ID IS HERE NOW ✅
+DB_FILE = "users.json"
+
+def load_db():
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_db(data):
+    with open(DB_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+users = load_db()
+
+def get_user(uid):
+    if str(uid) not in users:
+        users[str(uid)] = {"balance": 0, "activated": False, "referrals": 0}
+        save_db(users)
+    return users[str(uid)]
+
+def main_menu(is_admin=False):
+    buttons = [
+        [InlineKeyboardButton("TAP +1", callback_data="tap"),
+         InlineKeyboardButton("BALANCE", callback_data="balance")],
+        [InlineKeyboardButton("ACTIVATE 1500", callback_data="activate"),
+         InlineKeyboardButton("LEADERBOARD", callback_data="leaderboard")]
+    ]
+    if is_admin:
+        buttons.append([InlineKeyboardButton("ADMIN PANEL", callback_data="admin")])
+    return InlineKeyboardMarkup(buttons)
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    get_user(uid)
+    is_admin = (uid == ADMIN_ID)
+    await update.message.reply_text(
+        f"Welcome {update.effective_user.first_name}!\n\nEarn coins by tapping. Activate to earn faster.",
+        reply_markup=main_menu(is_admin)
+    )
+
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    uid = query.from_user.id
+    user = get_user(uid)
+    await query.answer()
+
+    if query.data == "tap":
+        user["balance"] += 1
+        save_db(users)
+        await query.edit_message_text(f"Tapped! +1 coin\nBalance: {user['balance']}", reply_markup=main_menu(uid == ADMIN_ID))
+
+    elif query.data == "balance":
+        status = "PRO" if user["activated"] else "FREE"
+        await query.edit_message_text(f"Balance: {user['balance']} coins\nStatus: {status}", reply_markup=main_menu(uid == ADMIN_ID))
+
+    elif query.data == "activate":
+        user["activated"] = True
+        save_db(users)
+        await query.edit_message_text("ACTIVATED! You now earn faster", reply_markup=main_menu(uid == ADMIN_ID))
+
+    elif query.data == "leaderboard":
+        top = sorted(users.items(), key=lambda x: x[1]["balance"], reverse=True)[:5]
+        text = "TOP 5\n" + "\n".join([f"{i+1}. User {k}: {v['balance']}" for i, (k,v) in enumerate(top)])
+        await query.edit_message_text(text, reply_markup=main_menu(uid == ADMIN_ID))
+
+    elif query.data == "admin":
+        if uid!= ADMIN_ID:
+            await query.answer("You are not admin", show_alert=True)
+            return
+        total = len(users)
+        activated = sum(1 for u in users.values() if u["activated"])
+        await query.edit_message_text(f"ADMIN PANEL\nTotal Users: {total}\nActivated: {activated}", reply_markup=main_menu(True))
+
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id!= ADMIN_ID:
+        await update.message.reply_text("You are not admin")
+        return
+    await start(update, context)
+
+app = ApplicationBuilder().token(TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("admin", admin))
+app.add_handler(CallbackQueryHandler(button))
+print("Bot is running...")
+app.run_polling()

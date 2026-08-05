@@ -42,15 +42,16 @@ def get_keyboard(uid):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    uid = str(user_id)
+    uid = str(update.from_user.id)
     if uid not in users:
         users[uid] = {"balance": 0, "activated": False, "referrals": 0}
         save_db(users)
     status = "Activated ✅" if users[uid]["activated"] else "Not Activated ❌"
-     await update.message.reply_text(
-    f"Tapped! +1 coin\n\nTotal: {users[uid]['balance']}",
-    reply_markup=keyboard
-)
+   save_db(users)
+    await update.message.reply_text(
+        f"Tapped! +1 coin\n\nTotal: {users[uid]['balance']}",
+        reply_markup=keyboard
+    )
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -87,13 +88,15 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "balance":
         status = "Activated ✅" if users[uid]["activated"] else "Not Activated ❌"
-        await query.edit_message_text(f"Balance: {users[uid]['balance']}\\nStatus: {status}", reply_markup=get_keyboard(uid))
+        await query.edit_message_text(f"Balance: {users[uid]['balance']}\n\nStatus: {status}" reply_markup=get_keyboard(uid))
 
     elif query.data == "admin" and uid == str(ADMIN_ID):
         total_users = len(users)
         total_coins = sum(u["balance"] for u in users.values())
         activated = sum(1 for u in users.values() if u["activated"])
-        await query.edit_message_text(f"ADMIN DASHBOARD\\n\\nTotal Users: {total_users}\\nActivated: {activated}\\nTotal Coins: {total_coins}", reply_markup=get_keyboard(uid))
+        await query.edit_message_text(
+    f"ADMIN DASHBOARD\n\nTotal Users: {total_users}\nTotal Coins: {total_coins}\nActivated: {activated}",
+    reply_markup=get_keyboard(uid)
 
     save_db(users)
 

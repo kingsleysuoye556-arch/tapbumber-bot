@@ -31,6 +31,45 @@ def send_welcome(message):
     except Exception as e:
         bot.send_message(message.chat.id, f"Error: {e}")
 
+
+
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id!= ADMIN_ID:
+        await update.message.reply_text("⛔ You are not admin")
+        return
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM users")
+    total_users = c.fetchone()[0]
+    c.execute("SELECT SUM(coins) FROM users")
+    total_coins = c.fetchone()[0] or 0
+    conn.close()
+    text = f"👑 ADMIN PANEL\n👥 Total Users: {total_users}\n💎 Total Coins: {total_coins}\n\nAdd coins: /addcoins user_id amount"
+    await update.message.reply_text(text)
+
+async def addcoins(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id!= ADMIN_ID:
+        await update.message.reply_text("⛔ You are not admin")
+        return
+    if len(context.args)!= 2:
+        await update.message.reply_text("Usage: /addcoins user_id amount")
+        return
+    try:
+        target_id = int(context.args[0])
+        amount = int(context.args[1])
+    except:
+        await update.message.reply_text("Error: user_id and amount must be numbers")
+        return
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("UPDATE users SET coins = coins +? WHERE user_id =?", (amount, target_id))
+    conn.commit()
+    conn.close()
+    await update.message.reply_text(f"✅ Added {amount} coins to user {target_id}")
+
+
 @bot.message_handler(func=lambda message: True)
 def handle_buttons(message):
     user_id = message.from_user.id

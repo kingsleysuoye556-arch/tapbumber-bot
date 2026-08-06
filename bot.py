@@ -1,7 +1,7 @@
 import os
 from telegram.ext import ApplicationBuilder, CommandHandler
 
-TOKEN = os.getenv("BOT_TOKEN")
+ TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 async def start(update, context):
     await update.message.reply_text("TapBumber is ONLINE! ✅")

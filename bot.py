@@ -25,13 +25,12 @@ def send_welcome(message):
         keyboard.row(btn2)
         keyboard.row(btn3, btn4, btn5)
         
+
         bot.send_message(message.chat.id, 
             f"⛏️💰 Welcome to TAPBUMBER!\nYour Balance: {user_balance[user_id]} coins", 
             reply_markup=keyboard)
     except Exception as e:
         bot.send_message(message.chat.id, f"Error: {e}")
-
-
 
 async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -83,8 +82,10 @@ def handle_buttons(message):
     elif message.text == 'BALANCE':
         bot.reply_to(message, f"Your Balance: {user_balance[user_id]} coins 💎")
     
-    else:
         bot.reply_to(message, f"{message.text} feature coming soon! 🚀")
 
 print("Bot is starting...")
 bot.polling(none_stop=True, interval=0)
+
+app.add_handler(CommandHandler("admin", admin))
+app.add_handler(CommandHandler("addcoins", addcoins))

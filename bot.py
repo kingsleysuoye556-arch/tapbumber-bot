@@ -3,7 +3,7 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-BOT_TOKEN = ("8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ")
+BOT_TOKEtEM0hMhQ")
 DB_NAME = "tapbumber.db"
 ACTIVATE_PRICE = 5 # $5 for later
 

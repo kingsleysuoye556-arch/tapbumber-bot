@@ -5,7 +5,7 @@ import time
 
 TOKEN = "8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ"
 bot = telebot.TeleBot(TOKEN)
-
+ADMIN_ID = 8930135604
 user_balance = {}
 
 @bot.message_handler(commands=['start'])

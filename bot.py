@@ -3,7 +3,7 @@ from telebot import types
 import os
 import time
 
-TOKEN = os.environ.get("BOT_TOKEN")
+TOKEN = "8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ"
 bot = telebot.TeleBot(TOKEN)
 
 user_balance = {}

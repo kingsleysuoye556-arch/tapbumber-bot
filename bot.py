@@ -1,91 +1,51 @@
-import telebot
-from telebot import types
+
+import sqlite3
 import os
-import time
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
-TOKEN = "8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ"
-bot = telebot.TeleBot(TOKEN)
-ADMIN_ID = 8930135604
-user_balance = {}
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+DB_NAME = "users.db"
+ADMIN_ID = 123456789 # we will change this in stage 3
 
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    try:
-        user_id = message.from_user.id
-        if user_id not in user_balance:
-            user_balance[user_id] = 51  # Starting balance
-        
-        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('TAP +1')
-        btn2 = types.KeyboardButton('BALANCE')
-        btn3 = types.KeyboardButton('ACTIVATE $10')
-        btn4 = types.KeyboardButton('ACTIVATE $30')
-        btn5 = types.KeyboardButton('ACTIVATE $60')
-        keyboard.row(btn1)
-        keyboard.row(btn2)
-        keyboard.row(btn3, btn4, btn5)
-        
-
-        bot.send_message(message.chat.id, 
-            f"⛏️💰 Welcome to TAPBUMBER!\nYour Balance: {user_balance[user_id]} coins", 
-            reply_markup=keyboard)
-    except Exception as e:
-        bot.send_message(message.chat.id, f"Error: {e}")
-
-async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id!= ADMIN_ID:
-        await update.message.reply_text("⛔ You are not admin")
-        return
+def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM users")
-    total_users = c.fetchone()[0]
-    c.execute("SELECT SUM(coins) FROM users")
-    total_coins = c.fetchone()[0] or 0
-    conn.close()
-    text = f"👑 ADMIN PANEL\n👥 Total Users: {total_users}\n💎 Total Coins: {total_coins}\n\nAdd coins: /addcoins user_id amount"
-    await update.message.reply_text(text)
-
-async def addcoins(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id!= ADMIN_ID:
-        await update.message.reply_text("⛔ You are not admin")
-        return
-    if len(context.args)!= 2:
-        await update.message.reply_text("Usage: /addcoins user_id amount")
-        return
-    try:
-        target_id = int(context.args[0])
-        amount = int(context.args[1])
-    except:
-        await update.message.reply_text("Error: user_id and amount must be numbers")
-        return
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("UPDATE users SET coins = coins +? WHERE user_id =?", (amount, target_id))
+    c.execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, coins INTEGER)")
     conn.commit()
     conn.close()
-    await update.message.reply_text(f"✅ Added {amount} coins to user {target_id}")
 
+def create_user_if_not_exists(user_id):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("INSERT OR IGNORE INTO users (user_id, coins) VALUES (?, 50)", (user_id,))
+    conn.commit()
+    conn.close()
 
-@bot.message_handler(func=lambda message: True)
-def handle_buttons(message):
-    user_id = message.from_user.id
-    if user_id not in user_balance:
-        user_balance[user_id] = 51
-    
-    if message.text == 'TAP +1':
-        user_balance[user_id] += 1
-        bot.reply_to(message, f"Tapped! +1 coin ⛏️\nNew Balance: {user_balance[user_id]}")
-    
-    elif message.text == 'BALANCE':
-        bot.reply_to(message, f"Your Balance: {user_balance[user_id]} coins 💎")
-    
-        bot.reply_to(message, f"{message.text} feature coming soon! 🚀")
+def get_user_coins(user_id):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT coins FROM users WHERE user_id =?", (user_id,))
+    result = c.fetchone()
+    conn.close()
+    return result[0] if result else 0
 
-print("Bot is starting...")
-bot.polling(none_stop=True, interval=0)
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    create_user_if_not_exists(user_id)
+    coins = get_user_coins(user_id)
 
-app.add_handler(CommandHandler("admin", admin))
-app.add_handler(CommandHandler("addcoins", addcoins))
+    keyboard = [[KeyboardButton("TAP +1")], [KeyboardButton("BALANCE")]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+    await update.message.reply_text(f"Welcome to TAPBUMBER 👑\nYour Balance: {coins} coins", reply_markup=reply_markup)
+
+def main():
+    init_db()
+    print("Bot is starting...")
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()

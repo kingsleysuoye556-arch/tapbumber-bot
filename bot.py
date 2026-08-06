@@ -1,65 +1,51 @@
-
 import telebot
 from telebot import types
-import json
 import os
+import time
 
-TOKEN =  "8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ" # <-- Your bot token WITH quotes
-ADMIN_ID = 8930135604  # <-- Your Telegram ID WITHOUT quotes
+TOKEN = os.environ.get("BOT_TOKEN")
+bot = telebot.TeleBot(TOKEN)
 
-bot = telebot.TeleBot(TOKEN)  # <-- THIS IS THE CORRECT ONE
-
-# YOUR TAPBUMBER BANNER - NOW WORKING
-BANNER_URL = "https://vault.pictures/i/e861c73e682e45ec8d343afa3a296ad5.jpg"
-
-# Database to store users and points
-users = {}
+user_balance = {}
 
 @bot.message_handler(commands=['start'])
-def start(message):
+def send_welcome(message):
+    try:
+        user_id = message.from_user.id
+        if user_id not in user_balance:
+            user_balance[user_id] = 51  # Starting balance
+        
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        btn1 = types.KeyboardButton('TAP +1')
+        btn2 = types.KeyboardButton('BALANCE')
+        btn3 = types.KeyboardButton('ACTIVATE $10')
+        btn4 = types.KeyboardButton('ACTIVATE $30')
+        btn5 = types.KeyboardButton('ACTIVATE $60')
+        keyboard.row(btn1)
+        keyboard.row(btn2)
+        keyboard.row(btn3, btn4, btn5)
+        
+        bot.send_message(message.chat.id, 
+            f"⛏️💰 Welcome to TAPBUMBER!\nYour Balance: {user_balance[user_id]} coins", 
+            reply_markup=keyboard)
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Error: {e}")
+
+@bot.message_handler(func=lambda message: True)
+def handle_buttons(message):
     user_id = message.from_user.id
+    if user_id not in user_balance:
+        user_balance[user_id] = 51
     
-    if user_id not in users:
-        users[user_id] = {'points': 0, 'referrals': 0}
+    if message.text == 'TAP +1':
+        user_balance[user_id] += 1
+        bot.reply_to(message, f"Tapped! +1 coin ⛏️\nNew Balance: {user_balance[user_id]}")
     
-    markup = types.InlineKeyboardMarkup()
-    tap_btn = types.InlineKeyboardButton("💰 TAP & EARN", callback_data='tap')
-    balance_btn = types.InlineKeyboardButton("📊 BALANCE", callback_data='balance')
-    invite_btn = types.InlineKeyboardButton("👥 INVITE", callback_data='invite')
-    rewards_btn = types.InlineKeyboardButton("🎁 REWARDS", callback_data='rewards')
-    markup.add(tap_btn)
-    markup.add(balance_btn, invite_btn)
-    markup.add(rewards_btn)
+    elif message.text == 'BALANCE':
+        bot.reply_to(message, f"Your Balance: {user_balance[user_id]} coins 💎")
     
-    caption = """
-**TAPBUMBER APP**
-*TAP TODAY, BUILD YOUR TOMORROW!*
+    else:
+        bot.reply_to(message, f"{message.text} feature coming soon! 🚀")
 
-Welcome {name}! 
-Earn points by tapping. Invite friends and unlock rewards.
-
-**SAFE & SECURE | INSTANT PAYOUTS | REAL REWARDS**
-""".format(name=message.from_user.first_name)
-    
-    bot.send_photo(chat_id=message.chat.id, photo=BANNER_URL, caption=caption, reply_markup=markup, parse_mode='Markdown')
-
-@bot.callback_query_handler(func=lambda call: True)
-def callback(call):
-    user_id = call.from_user.id
-    
-    if call.data == 'tap':
-        users[user_id]['points'] += 10
-        bot.answer_callback_query(call.id, "You earned +10 points! 🔥")
-        bot.send_message(call.message.chat.id, f"Tapped! +10 points\nYour Balance: {users[user_id]['points']} points")
-    
-    elif call.data == 'balance':
-        bot.send_message(call.message.chat.id, f"📊 **YOUR BALANCE**\n\nPoints: {users[user_id]['points']}\nReferrals: {users[user_id]['referrals']}")
-    
-    elif call.data == 'invite':
-        bot.send_message(call.message.chat.id, f"👥 **INVITE FRIENDS**\n\nShare your link and earn 50 points per friend!\n\nYour Link: https://t.me/{bot.get_me().username}?start={user_id}")
-    
-    elif call.data == 'rewards':
-        bot.send_message(call.message.chat.id, "🎁 **REWARDS**\n\n100 Points = ₦100\n500 Points = ₦500\n1000 Points = ₦1000\n\nContact admin to withdraw!")
-
-print("TAPBUMBER BOT IS RUNNING...")
-bot.polling()
+print("Bot is starting...")
+bot.polling(none_stop=True, interval=0)

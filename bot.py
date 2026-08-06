@@ -1,7 +1,7 @@
 import os
 from telegram.ext import ApplicationBuilder, CommandHandler
 
-TOKEN =8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ"
+TOKEN = "8592807124:AAHii4vfQRnIvcXNr7Z9A4E10dktEM0hMhQ"
 
 async def start(update, context):
     await update.message.reply_text("TapBumber is ONLINE! ✅\nSend /tap to test")

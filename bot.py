@@ -1,8 +1,10 @@
+ 
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import os
-from telegram.ext import ApplicationBuilder, CommandHandler
 
-TOKEN = "8772661448:AAGXNERh09PpaQzEQiWCqSy8uSQFD3EZdS0" 
-
+BOT_TOKEN = "8772661448:AAGXNERh09PpaQzEQiWCqSy8uSQFD3EZdS0"
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+app.run_polling()
 async def start(update, context):
     await update.message.reply_text("TapBumber is ONLINE! ✅")
 

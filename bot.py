@@ -12,11 +12,6 @@ app.add_handler(CommandHandler("start", start))
 
 if __name__ == "__main__":
     app.run_polling()
-async def start(update, context):
-    await update.message.reply_text("TapBumber is ONLINE! ✅")
-
-async def tap(update, context):
-    await update.message.reply_text("Tapped! +1 💰")
 
 app = ApplicationBuilder().token(TOKEN).build()
 

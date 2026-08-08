@@ -5,7 +5,7 @@ import time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-TOKEN = "PASTE_YOUR_BOT_TOKEN_HERE"
+TOKEN = "8772661448:AAGXNERh09PpaQzEQiWCqSy8uSQFD3EZdS0"
 FILE = "coins.json"
 
 DAILY_LIMIT = 1000

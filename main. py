@@ -1,0 +1,142 @@
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+import json
+import os
+from datetime import datetime
+
+TOKEN = "8772661448:AAGXNERh09PpaQzEQiWCqSy8uSQFD3EZdS0"
+ADMIN_ID = 8930135604  # <-- YOUR ADMIN ID
+LOGO_URL = "https://files.catbox.moe/2e6zd1.jpg"  # <-- YOUR PHOTO LINK
+
+DATA_FILE = "coins.json"
+TAP_VALUE = 0.02          # Each tap = 0.02 coins
+DAILY_LIMIT_COINS = 1000.00 # 1000 coins per day
+NAIRA_RATE = 200          # 1000 coins = 200 naira
+
+def load_coins():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_coins(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f)
+
+def get_today():
+    return datetime.now().strftime("%Y-%m-%d")
+
+user_coins = load_coins()
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+    today = get_today()
+    
+    if user_id not in user_coins:
+        user_coins[user_id] = {"coins": 0.0, "daily_coins": 0.0, "date": today}
+    
+    # Reset daily coins if new day
+    if user_coins[user_id]["date"] != today:
+        user_coins[user_id]["daily_coins"] = 0.0
+        user_coins[user_id]["date"] = today
+    
+    save_coins(user_coins)
+    
+    coins = user_coins[user_id]["coins"]
+    daily_coins = user_coins[user_id]["daily_coins"]
+    remaining = DAILY_LIMIT_COINS - daily_coins
+    naira = (coins / DAILY_LIMIT_COINS) * NAIRA_RATE
+    
+    keyboard = [
+        [InlineKeyboardButton("💰 TAP TO EARN +0.02", callback_data="tap")],
+        [InlineKeyboardButton("👛 WALLET", callback_data="wallet")],
+        [InlineKeyboardButton("👥 REFER", callback_data="refer")]
+    ]
+    if update.effective_user.id == ADMIN_ID:
+        keyboard.append([InlineKeyboardButton("👑 ADMIN PANEL", callback_data="admin")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await context.bot.send_photo(
+        chat_id=update.effective_chat.id,
+        photo=LOGO_URL,
+        caption=f"*Welcome to TAP TO EARN!*\n\nYour Coins: {coins:.2f} 🪙\n≈ ₦{naira:.2f}\nToday Earned: {daily_coins:.2f}/{DAILY_LIMIT_COINS:.2f}\n\nTap to earn +0.02",
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
+
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global user_coins
+    query = update.callback_query
+    user_id = str(query.from_user.id)
+    today = get_today()
+    await query.answer()
+    
+    if user_id not in user_coins:
+        user_coins[user_id] = {"coins": 0.0, "daily_coins": 0.0, "date": today}
+    
+    # Reset daily coins if new day
+    if user_coins[user_id]["date"] != today:
+        user_coins[user_id]["daily_coins"] = 0.0
+        user_coins[user_id]["date"] = today
+    
+    coins = user_coins[user_id]["coins"]
+    daily_coins = user_coins[user_id]["daily_coins"]
+    
+    if query.data == "tap":
+        if daily_coins >= DAILY_LIMIT_COINS:
+            await query.answer("⚠️ Daily limit reached! 1000 coins earned. Come back tomorrow 12am.", show_alert=True)
+            return
+        
+        user_coins[user_id]["coins"] += TAP_VALUE
+        user_coins[user_id]["daily_coins"] += TAP_VALUE
+        save_coins(user_coins)
+        
+        coins = user_coins[user_id]["coins"]
+        daily_coins = user_coins[user_id]["daily_coins"]
+        remaining = DAILY_LIMIT_COINS - daily_coins
+        naira = (coins / DAILY_LIMIT_COINS) * NAIRA_RATE
+        
+        keyboard = [
+            [InlineKeyboardButton("💰 TAP TO EARN +0.02", callback_data="tap")],
+            [InlineKeyboardButton("👛 WALLET", callback_data="wallet")],
+            [InlineKeyboardButton("👥 REFER", callback_data="refer")]
+        ]
+        if query.from_user.id == ADMIN_ID:
+            keyboard.append([InlineKeyboardButton("👑 ADMIN PANEL", callback_data="admin")])
+        
+        await query.edit_message_caption(
+            caption=f"*Welcome to TAP TO EARN!*\n\nYour Coins: {coins:.2f} 🪙\n≈ ₦{naira:.2f}\nToday Earned: {daily_coins:.2f}/{DAILY_LIMIT_COINS:.2f}\nRemaining: {remaining:.2f}\n\n+0.02 Coin! Keep tapping!",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+    
+    elif query.data == "wallet":
+        naira = (coins / DAILY_LIMIT_COINS) * NAIRA_RATE
+        await query.edit_message_caption(
+            caption=f"*👛 YOUR WALLET*\n\nTotal Coins: {coins:.2f} 🪙\n≈ ₦{naira:.2f}\n\nRate: {DAILY_LIMIT_COINS:.2f} coins = ₦{NAIRA_RATE}\nMax: {DAILY_LIMIT_COINS:.2f} coins/day",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ BACK", callback_data="back")]])
+        )
+    
+    elif query.data == "refer":
+        await query.edit_message_caption(
+            caption=f"*👥 REFER FRIENDS*\n\nComing Soon!\nEarn bonus coins when friends join.",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ BACK", callback_data="back")]])
+        )
+    
+    elif query.data == "admin" and query.from_user.id == ADMIN_ID:
+        total_users = len(user_coins)
+        total_coins = sum(u["coins"] for u in user_coins.values())
+        await query.edit_message_caption(
+            caption=f"*👑 ADMIN PANEL*\n\nTotal Users: {total_users}\nTotal Coins: {total_coins:.2f} 🪙\n\nRate: {DAILY_LIMIT_COINS:.2f} coins = ₦{NAIRA_RATE}",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ BACK", callback_data="back")]])
+        )
+    
+    elif query.data == "back":
+        await start(update, context)
+
+app = Application.builder().token(TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+ *app.add_handler* (CallbackQueryHandler(button))
+print("Bot is running...")
+app.run_polling()

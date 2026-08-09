@@ -16,7 +16,7 @@ NAIRA_RATE = 200          # 1000 coins = 200 naira
 def load_coins():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
-            return json.load(f)
+         return json.load(f)
     return {}
 
 def save_coins(data):

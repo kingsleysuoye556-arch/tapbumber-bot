@@ -3,7 +3,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 import json
 import os
 from datetime import datetime
-   TOKEN = "8741964241:AAHuXwnqRCUCVDus2j5qzoTGP989boM97Mo"
+   TOKEN = os.getenv("TELEGRAM_TOKEN")
 ADMIN_ID = 8930135604  # <-- YOUR ADMIN ID
 LOGO_URL = "https://files.catbox.moe/2e6zd1.jpg"  # <-- YOUR PHOTO LINK
 

@@ -4,13 +4,12 @@ import json
 import os
 from datetime import datetime
 TOKEN = os.getenv("TELEGRAM_TOKEN")
- = 8930135604  # <-- YOUR ADMIN ID
-LOGO_URL = "https://files.catbox.moe/2e6zd1.jpg"  # <-- YOUR PHOTO LINK
-
-DATA_FILE = "coins.json" 
-TAP_VALUE = 0.02          # Each tap = 0.02 coins
-DAILY_LIMIT_COINS = 1000.00 # 1000 coins per day
-NAIRA_RATE = 200          # 1000 coins = 200 naira
+ADMIN_ID = 8930135604
+LOGO_URL = "https://files.catbox.moe/2e6zd1.jpg"
+DATA_FILE = "coins.json"
+TAP_VALUE = 0.02
+DAILY_LIMIT_COINS = 1000.00
+NATRA_RATE = 200
 
 def load_coins():
     if os.path.exists(DATA_FILE):

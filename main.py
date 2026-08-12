@@ -9,7 +9,7 @@ LOGO_URL = "https://files.catbox.moe/2e6zd1.jpg"
 DATA_FILE = "coins.json"
 TAP_VALUE = 0.02
 DAILY_LIMIT_COINS = 1000.00
-NATRA_RATE = 200
+NAIRA_RATE = 200
 
 def load_coins():
     if os.path.exists(DATA_FILE):

@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-ADMIN_ID = 8930135604  # <-- YOUR ADMIN ID
+ = 8930135604  # <-- YOUR ADMIN ID
 LOGO_URL = "https://files.catbox.moe/2e6zd1.jpg"  # <-- YOUR PHOTO LINK
 
 DATA_FILE = "coins.json" 

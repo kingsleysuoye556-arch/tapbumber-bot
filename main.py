@@ -66,23 +66,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_data(data)
     await show_main_menu(update, context, user)
 
-async def show_main_menu(update, context, user):
+# FIXED: Accepts Update
+async def show_main_menu(update_or_query, context, user):
     keyboard = [
         [InlineKeyboardButton(f"TAP +{TAP_VALUE}", callback_data="tap")],
         [InlineKeyboardButton("💰 Balance", callback_data="balance"), InlineKeyboardButton("👥 Refer", callback_data="refer")],
         [InlineKeyboardButton("🆔 My ID", callback_data="myid"), InlineKeyboardButton("🔑 Activation", callback_data="activation")],
         [InlineKeyboardButton("💸 Withdraw", callback_data="withdraw")]
     ]
-    if str(update.effective_user.id) == str(ADMIN_ID):
+    
+    user_id = update_or_query.effective_user.id
+    if str(user_id) == str(ADMIN_ID):
         keyboard.append([InlineKeyboardButton("👑 Admin Panel", callback_data="admin")])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     caption = f"⚡ TAP EARN BOT ⚡\n\n💰 Balance: ₦{user['balance']:.3f}\n📊 Taps Today: {user['taps_today']}/{TAPS_PER_DAY}\n🔑 Status: {'Activated' if user['activated'] else 'Not Activated'}"
 
-    if update.message:
-        await update.message.reply_photo(photo=TAP_IMAGE_URL, caption=caption, reply_markup=reply_markup)
+    if update_or_query.message:
+        await update_or_query.message.reply_photo(photo=TAP_IMAGE_URL, caption=caption, reply_markup=reply_markup)
     else:
-        await update.callback_query.edit_message_caption(caption=caption, reply_markup=reply_markup)
+        await update_or_query.callback_query.edit_message_caption(caption=caption, reply_markup=reply_markup)
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -98,14 +101,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user["balance"] += TAP_VALUE
             user["taps_today"] += 1
             save_data(data)
-            await show_main_menu(query, context, user)
+            await show_main_menu(update, context, user)
         else:
             await query.answer(f"Daily limit of {TAPS_PER_DAY} taps reached!", show_alert=True)
 
     elif query.data == "balance":
         await query.edit_message_caption(caption=f"💰 Your Balance: ₦{user['balance']:.3f}\n📊 Taps Today: {user['taps_today']}/{TAPS_PER_DAY}", reply_markup=query.message.reply_markup)
 
-    # FIX: Added My ID Handler
     elif query.data == "myid":
         await query.edit_message_caption(
             caption=f"🆔 Your ID: `{query.from_user.id}`\n👤 Name: {user['first_name']}",
@@ -141,7 +143,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await admin_panel(query, context, data)
 
     elif query.data == "back":
-        await show_main_menu(query, context, user)
+        await show_main_menu(update, context, user)
 
     elif query.data == "admin_approve_act" and str(query.from_user.id) == str(ADMIN_ID):
         await admin_approve_activations(query, context, data)
@@ -237,7 +239,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("Bot V2.3 Final is running...")
+    print("Bot V2.4 Final is running...")
     app.run_polling()
 
 if __name__ == "__main__":

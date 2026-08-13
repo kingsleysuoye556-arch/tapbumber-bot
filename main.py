@@ -9,7 +9,6 @@ from telegram.ext import (
 )
 import json
 import os
-import asyncio
 from datetime import datetime
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -25,7 +24,6 @@ BANK_DETAILS = "Account: 1530258732\nBank: Access Bank\nAccount Name: Kingsley S
 # TAPBUMBER SETTINGS
 # =========================
 
-# Tap value
 TAP_VALUE = 0.005
 
 # FREE MODE
@@ -57,10 +55,7 @@ ACTIVE_REFERRAL_BONUS = 500.00
 # POSTING SETTINGS
 # =========================
 
-# Reward for typing/posting or product photo
 POST_REWARD = 10.00
-
-# Maximum rewarded posts/photos per day
 DAILY_POST_LIMIT = 10
 
 
@@ -92,22 +87,13 @@ def new_user():
         "coins": 0.0,
         "daily_coins": 0.0,
         "date": get_today(),
-
         "activated": False,
-
-        # User information
         "username": "No username",
         "first_name": "",
-
-        # Referral system
         "referrer": "",
         "referral_reward_paid": False,
         "referrals": [],
-
-        # Withdrawal
         "withdrawal_requested": False,
-
-        # Posting system
         "daily_posts": 0
     }
 
@@ -127,7 +113,6 @@ def ensure_user(user_id):
         if key not in user_coins[user_id]:
             user_coins[user_id][key] = value
 
-    # New day
     if user_coins[user_id].get("date") != today:
         user_coins[user_id]["daily_coins"] = 0.0
         user_coins[user_id]["daily_posts"] = 0
@@ -149,11 +134,9 @@ def coins_to_naira(coins):
 def withdrawal_window_open():
     now = datetime.now()
 
-    # Friday only
     if now.weekday() != 4:
         return False
 
-    # Friday 7:00 PM - 9:00 PM
     current_minutes = now.hour * 60 + now.minute
     start_minutes = 19 * 60
     end_minutes = 21 * 60
@@ -219,28 +202,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 callback_data="tap"
             )
         ],
-
         [
             InlineKeyboardButton(
                 "⌨️ POST / TYPE",
                 callback_data="post_info"
             )
         ],
-
         [
             InlineKeyboardButton(
                 "📸 POST PRODUCT PHOTO",
                 callback_data="photo_info"
             )
         ],
-
         [
             InlineKeyboardButton(
                 "👛 WALLET",
                 callback_data="wallet"
             )
         ],
-
         [
             InlineKeyboardButton(
                 "👥 REFER",
@@ -281,7 +260,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_photo(
         chat_id=update.effective_chat.id,
         photo=LOGO_URL,
-
         caption=(
             "*Welcome to TAP BUMBER!*\n\n"
             f"Mode: {mode_text}\n"
@@ -293,7 +271,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Posts Remaining: {posts_remaining}\n"
             f"Status: {'✅ Activated' if activated else '🆓 Free'}"
         ),
-
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
@@ -313,13 +290,11 @@ async def reward_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     user = ensure_user(user_id)
 
-    # Update user information
     user["username"] = update.effective_user.username or "No username"
     user["first_name"] = update.effective_user.first_name or ""
 
     daily_limit = get_daily_limit(user)
 
-    # Check daily post limit
     if user.get("daily_posts", 0) >= DAILY_POST_LIMIT:
         await update.message.reply_text(
             "⚠️ You have reached your daily posting limit.\n\n"
@@ -328,7 +303,6 @@ async def reward_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Check overall daily coin limit
     if user["daily_coins"] + POST_REWARD > daily_limit:
         await update.message.reply_text(
             "⚠️ Your daily coin limit has been reached.\n\n"
@@ -336,7 +310,6 @@ async def reward_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Give reward
     user["coins"] += POST_REWARD
     user["daily_coins"] += POST_REWARD
     user["daily_posts"] = user.get("daily_posts", 0) + 1
@@ -365,8 +338,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = str(query.from_user.id)
 
-    await query.answer()
-
     user = ensure_user(user_id)
 
     user["username"] = query.from_user.username or "No username"
@@ -391,13 +362,114 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
+        # Add tap reward
         user["coins"] += TAP_VALUE
         user["daily_coins"] += TAP_VALUE
 
         save_coins(user_coins)
 
-        await asyncio.sleep(0.05)
-        await start(update, context)
+        coins = user["coins"]
+        daily_coins = user["daily_coins"]
+
+        gross_naira = coins_to_naira(coins)
+        net_naira = gross_naira * (1 - ADMIN_FEE)
+
+        remaining = max(
+            0,
+            daily_limit - daily_coins
+        )
+
+        posts_today = user.get("daily_posts", 0)
+
+        posts_remaining = max(
+            0,
+            DAILY_POST_LIMIT - posts_today
+        )
+
+        activated = user.get("activated", False)
+
+        mode_text = (
+            "💰 ACTIVATED MODE"
+            if activated
+            else "🆓 FREE MODE"
+        )
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "💰 TAP TO EARN +0.005",
+                    callback_data="tap"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "⌨️ POST / TYPE",
+                    callback_data="post_info"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📸 POST PRODUCT PHOTO",
+                    callback_data="photo_info"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "👛 WALLET",
+                    callback_data="wallet"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "👥 REFER",
+                    callback_data="refer"
+                )
+            ]
+        ]
+
+        if activated:
+            keyboard.append([
+                InlineKeyboardButton(
+                    "💸 WITHDRAW",
+                    callback_data="withdraw"
+                )
+            ])
+        else:
+            keyboard.append([
+                InlineKeyboardButton(
+                    f"🔒 ACTIVATE FOR ₦{ACTIVATION_FEE_NAIRA}",
+                    callback_data="activate"
+                )
+            ])
+
+        if query.from_user.id == ADMIN_ID:
+            keyboard.append([
+                InlineKeyboardButton(
+                    "👑 ADMIN PANEL",
+                    callback_data="admin"
+                )
+            ])
+
+        # IMPORTANT:
+        # Update the SAME message.
+        # Do NOT call start() here.
+        await query.edit_message_caption(
+            caption=(
+                "*Welcome to TAP BUMBER!*\n\n"
+                f"Mode: {mode_text}\n"
+                f"Your Coins: {coins:.3f} 🪙\n"
+                f"≈ ₦{net_naira:.2f} after 20% fee\n"
+                f"Today Earned: {daily_coins:.3f}/{daily_limit:.0f}\n"
+                f"Remaining: {remaining:.3f}\n"
+                f"Posts Today: {posts_today}/{DAILY_POST_LIMIT}\n"
+                f"Posts Remaining: {posts_remaining}\n"
+                f"Status: {'✅ Activated' if activated else '🆓 Free'}"
+            ),
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+
+        await query.answer("✅ +0.005 coins")
 
 
     # =========================
@@ -406,6 +478,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "post_info":
 
+        await query.answer()
+
         posts_today = user.get("daily_posts", 0)
         posts_remaining = max(
             0,
@@ -413,7 +487,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         await query.edit_message_caption(
-
             caption=(
                 "*⌨️ TYPING / POSTING*\n\n"
                 f"🎁 Reward per post: +{POST_REWARD:.0f} coins\n"
@@ -425,7 +498,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "to receive the posting reward.\n\n"
                 "10 qualifying posts × 10 coins = 100 coins."
             ),
-
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton(
@@ -434,7 +506,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 ]
             ]),
-
             parse_mode="Markdown"
         )
 
@@ -445,8 +516,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "photo_info":
 
-        await query.edit_message_caption(
+        await query.answer()
 
+        await query.edit_message_caption(
             caption=(
                 "*📸 PRODUCT PHOTO POSTING*\n\n"
                 f"🎁 Reward per product photo: "
@@ -457,7 +529,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "and it will be counted as a qualifying post.\n\n"
                 "Please send real product photos only."
             ),
-
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton(
@@ -466,7 +537,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 ]
             ]),
-
             parse_mode="Markdown"
         )
 
@@ -477,8 +547,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "activate":
 
-        await query.edit_message_caption(
+        await query.answer()
 
+        await query.edit_message_caption(
             caption=(
                 f"*🔒 ACCOUNT ACTIVATION*\n\n"
                 f"Activation Fee: ₦{ACTIVATION_FEE_NAIRA}\n\n"
@@ -489,7 +560,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Admin will verify your payment and activate "
                 "your account."
             ),
-
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton(
@@ -504,7 +574,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 ]
             ]),
-
             parse_mode="Markdown"
         )
 
@@ -514,6 +583,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
 
     elif query.data == "paid":
+
+        await query.answer(
+            "📩 Payment notice sent to Tap Bumber Admin. "
+            "Your account will be activated after verification.",
+            show_alert=True
+        )
 
         await context.bot.send_message(
             chat_id=ADMIN_ID,
@@ -525,12 +600,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Please verify payment and activate the user."
             ),
             parse_mode="Markdown"
-        )
-
-        await query.answer(
-            "📩 Payment notice sent to Tap Bumber Admin. "
-            "Your account will be activated after verification.",
-            show_alert=True
         )
 
 
@@ -616,6 +685,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "wallet":
 
+        await query.answer()
+
         gross_naira = coins_to_naira(coins)
         fee = gross_naira * ADMIN_FEE
         net_naira = gross_naira - fee
@@ -625,7 +696,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         daily_limit = get_daily_limit(user)
 
         await query.edit_message_caption(
-
             caption=(
                 "*👛 YOUR WALLET*\n\n"
                 f"Total Coins: {coins:.3f} 🪙\n"
@@ -642,7 +712,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Withdrawal: Friday 7:00 PM–9:00 PM\n"
                 "Admin Fee: 20%"
             ),
-
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton(
@@ -651,7 +720,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 ]
             ]),
-
             parse_mode="Markdown"
         )
 
@@ -661,6 +729,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
 
     elif query.data == "refer":
+
+        await query.answer()
 
         bot_username = (
             await context.bot.get_me()
@@ -685,7 +755,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     active_referrals += 1
 
         await query.edit_message_caption(
-
             caption=(
                 "*👥 REFER FRIENDS*\n\n"
                 "Share your referral link:\n\n"
@@ -698,7 +767,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "500-coin bonus when your referred user "
                 "becomes ACTIVE."
             ),
-
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton(
@@ -707,7 +775,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 ]
             ]),
-
             parse_mode="Markdown"
         )
 
@@ -717,6 +784,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
 
     elif query.data == "admin" and query.from_user.id == ADMIN_ID:
+
+        await query.answer()
 
         total_users = len(user_coins)
 
@@ -734,7 +803,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         free_users = total_users - activated_users
 
         await query.edit_message_caption(
-
             caption=(
                 "*👑 TAP BUMBER ADMIN PANEL*\n\n"
                 f"Total Users: {total_users}\n"
@@ -744,7 +812,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Management Withdrawal: "
                 f"₦{MANAGEMENT_WITHDRAW_NAIRA:.0f}"
             ),
-
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton(
@@ -759,7 +826,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 ]
             ]),
-
             parse_mode="Markdown"
         )
 
@@ -769,6 +835,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
 
     elif query.data == "users" and query.from_user.id == ADMIN_ID:
+
+        await query.answer()
 
         if not user_coins:
 
@@ -873,6 +941,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "back":
 
+        await query.answer()
         await start(update, context)
 
 
@@ -1016,7 +1085,6 @@ app.add_handler(
     CallbackQueryHandler(button)
 )
 
-# Text messages = posting/typing reward
 app.add_handler(
     MessageHandler(
         filters.TEXT & ~filters.COMMAND,
@@ -1024,7 +1092,6 @@ app.add_handler(
     )
 )
 
-# Product photos = posting reward
 app.add_handler(
     MessageHandler(
         filters.PHOTO,

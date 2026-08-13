@@ -1,15 +1,10 @@
-
 import os
 import json
 from datetime import datetime, time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-# ===== SETTINGS =====
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-ADMIN_ID = 8930135604
-
-TAP_IMAGE_URL = "https://files.catbox.moe/es
 ADMIN_ID = 8930135604
 
 TAP_IMAGE_URL = "https://files.catbox.moe/esoo5t.png"

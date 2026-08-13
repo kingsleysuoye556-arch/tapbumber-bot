@@ -1,5 +1,12 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    MessageHandler,
+    filters
+)
 import json
 import os
 import asyncio
@@ -18,8 +25,8 @@ BANK_DETAILS = "Account: 1530258732\nBank: Access Bank\nAccount Name: Kingsley S
 # TAPBUMBER SETTINGS
 # =========================
 
-# Normal tap value
-TAP_VALUE = 0.002
+# Tap value
+TAP_VALUE = 0.005
 
 # FREE MODE
 FREE_DAILY_LIMIT_COINS = 50.00
@@ -45,6 +52,16 @@ ADMIN_FEE = 0.20
 
 # Active referral reward
 ACTIVE_REFERRAL_BONUS = 500.00
+
+# =========================
+# POSTING SETTINGS
+# =========================
+
+# Reward for typing/posting or product photo
+POST_REWARD = 10.00
+
+# Maximum rewarded posts/photos per day
+DAILY_POST_LIMIT = 10
 
 
 # =========================
@@ -88,7 +105,10 @@ def new_user():
         "referrals": [],
 
         # Withdrawal
-        "withdrawal_requested": False
+        "withdrawal_requested": False,
+
+        # Posting system
+        "daily_posts": 0
     }
 
 
@@ -110,6 +130,7 @@ def ensure_user(user_id):
     # New day
     if user_coins[user_id].get("date") != today:
         user_coins[user_id]["daily_coins"] = 0.0
+        user_coins[user_id]["daily_posts"] = 0
         user_coins[user_id]["date"] = today
 
     return user_coins[user_id]
@@ -149,7 +170,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     user = ensure_user(user_id)
 
-    # Save Telegram username and name
     user["username"] = update.effective_user.username or "No username"
     user["first_name"] = update.effective_user.first_name or ""
 
@@ -189,11 +209,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     remaining = max(0, daily_limit - daily_coins)
 
+    posts_today = user.get("daily_posts", 0)
+    posts_remaining = max(0, DAILY_POST_LIMIT - posts_today)
+
     keyboard = [
         [
             InlineKeyboardButton(
-                "💰 TAP TO EARN +0.002",
+                "💰 TAP TO EARN +0.005",
                 callback_data="tap"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "⌨️ POST / TYPE",
+                callback_data="post_info"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📸 POST PRODUCT PHOTO",
+                callback_data="photo_info"
             )
         ],
 
@@ -252,11 +289,68 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"≈ ₦{net_naira:.2f} after 20% fee\n"
             f"Today Earned: {daily_coins:.3f}/{daily_limit:.0f}\n"
             f"Remaining: {remaining:.3f}\n"
+            f"Posts Today: {posts_today}/{DAILY_POST_LIMIT}\n"
+            f"Posts Remaining: {posts_remaining}\n"
             f"Status: {'✅ Activated' if activated else '🆓 Free'}"
         ),
 
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
+    )
+
+
+# =========================
+# POST REWARD FUNCTION
+# =========================
+
+async def reward_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    global user_coins
+
+    if not update.effective_user:
+        return
+
+    user_id = str(update.effective_user.id)
+    user = ensure_user(user_id)
+
+    # Update user information
+    user["username"] = update.effective_user.username or "No username"
+    user["first_name"] = update.effective_user.first_name or ""
+
+    daily_limit = get_daily_limit(user)
+
+    # Check daily post limit
+    if user.get("daily_posts", 0) >= DAILY_POST_LIMIT:
+        await update.message.reply_text(
+            "⚠️ You have reached your daily posting limit.\n\n"
+            f"Maximum rewarded posts per day: {DAILY_POST_LIMIT}\n"
+            f"Reward per post: {POST_REWARD:.0f} coins."
+        )
+        return
+
+    # Check overall daily coin limit
+    if user["daily_coins"] + POST_REWARD > daily_limit:
+        await update.message.reply_text(
+            "⚠️ Your daily coin limit has been reached.\n\n"
+            f"Daily limit: {daily_limit:.0f} coins."
+        )
+        return
+
+    # Give reward
+    user["coins"] += POST_REWARD
+    user["daily_coins"] += POST_REWARD
+    user["daily_posts"] = user.get("daily_posts", 0) + 1
+
+    save_coins(user_coins)
+
+    posts_left = DAILY_POST_LIMIT - user["daily_posts"]
+
+    await update.message.reply_text(
+        "✅ Post accepted!\n\n"
+        f"🎁 Reward: +{POST_REWARD:.0f} coins\n"
+        f"🪙 Total Coins: {user['coins']:.3f}\n"
+        f"📊 Posts Today: {user['daily_posts']}/{DAILY_POST_LIMIT}\n"
+        f"📌 Posts Remaining: {posts_left}"
     )
 
 
@@ -275,7 +369,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user = ensure_user(user_id)
 
-    # Keep username updated
     user["username"] = query.from_user.username or "No username"
     user["first_name"] = query.from_user.first_name or ""
 
@@ -303,8 +396,79 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         save_coins(user_coins)
 
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.05)
         await start(update, context)
+
+
+    # =========================
+    # POST INFO
+    # =========================
+
+    elif query.data == "post_info":
+
+        posts_today = user.get("daily_posts", 0)
+        posts_remaining = max(
+            0,
+            DAILY_POST_LIMIT - posts_today
+        )
+
+        await query.edit_message_caption(
+
+            caption=(
+                "*⌨️ TYPING / POSTING*\n\n"
+                f"🎁 Reward per post: +{POST_REWARD:.0f} coins\n"
+                f"🎯 Daily rewarded posts: {DAILY_POST_LIMIT}\n"
+                f"📊 Your posts today: "
+                f"{posts_today}/{DAILY_POST_LIMIT}\n"
+                f"📌 Remaining today: {posts_remaining}\n\n"
+                "Simply send a text message to the bot "
+                "to receive the posting reward.\n\n"
+                "10 qualifying posts × 10 coins = 100 coins."
+            ),
+
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton(
+                        "⬅️ BACK",
+                        callback_data="back"
+                    )
+                ]
+            ]),
+
+            parse_mode="Markdown"
+        )
+
+
+    # =========================
+    # PHOTO INFO
+    # =========================
+
+    elif query.data == "photo_info":
+
+        await query.edit_message_caption(
+
+            caption=(
+                "*📸 PRODUCT PHOTO POSTING*\n\n"
+                f"🎁 Reward per product photo: "
+                f"+{POST_REWARD:.0f} coins\n"
+                f"🎯 Maximum rewarded posts/photos per day: "
+                f"{DAILY_POST_LIMIT}\n\n"
+                "Send a product photo directly to the bot "
+                "and it will be counted as a qualifying post.\n\n"
+                "Please send real product photos only."
+            ),
+
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton(
+                        "⬅️ BACK",
+                        callback_data="back"
+                    )
+                ]
+            ]),
+
+            parse_mode="Markdown"
+        )
 
 
     # =========================
@@ -384,7 +548,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # Convert ₦500 minimum to coins
         minimum_coins = (
             WITHDRAW_MIN_NAIRA / NAIRA_RATE
         ) * ACTIVATED_DAILY_LIMIT_COINS
@@ -430,9 +593,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
 
-        # Reset after request
         user["coins"] = 0.0
         user["daily_coins"] = 0.0
+        user["daily_posts"] = 0
         user["withdrawal_requested"] = False
 
         save_coins(user_coins)
@@ -470,7 +633,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"After 20% Fee: ₦{net_naira:.2f}\n"
                 f"Mode: "
                 f"{'💰 Activated' if activated else '🆓 Free'}\n"
-                f"Daily Limit: {daily_limit:.0f} coins\n\n"
+                f"Daily Limit: {daily_limit:.0f} coins\n"
+                f"Posts Today: "
+                f"{user.get('daily_posts', 0)}/{DAILY_POST_LIMIT}\n\n"
                 f"Rate: {ACTIVATED_DAILY_LIMIT_COINS:.0f} coins = "
                 f"₦{NAIRA_RATE:.0f}\n"
                 f"Minimum Withdrawal: ₦{WITHDRAW_MIN_NAIRA:.0f}\n"
@@ -649,7 +814,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"{'✅ Activated' if activated else '🆓 Free'}\n\n"
             )
 
-        # Telegram message length protection
         if len(users_text) > 4000:
 
             parts = []
@@ -750,11 +914,9 @@ async def activate_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ACTIVATE USER
     # =========================
 
-    # Remove/reset free-mode balance
     target["coins"] = 0.0
     target["daily_coins"] = 0.0
-
-    # Start activated mode
+    target["daily_posts"] = 0
     target["activated"] = True
 
     # =========================
@@ -810,7 +972,10 @@ async def activate_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Your free-mode balance has been reset to 0.\n\n"
                 "💰 You are now in ACTIVATED MODE.\n"
                 "🪙 Daily tapping limit: 1,000 coins.\n"
-                "👆 Tap value: 0.002 coins.\n\n"
+                "👆 Tap value: 0.005 coins.\n"
+                f"⌨️ Post reward: +{POST_REWARD:.0f} coins.\n"
+                f"📸 Product photo reward: +{POST_REWARD:.0f} coins.\n"
+                f"🎯 Daily rewarded posts: {DAILY_POST_LIMIT}.\n\n"
                 "You can now start earning normally."
             ),
             parse_mode="Markdown"
@@ -849,6 +1014,22 @@ app.add_handler(
 
 app.add_handler(
     CallbackQueryHandler(button)
+)
+
+# Text messages = posting/typing reward
+app.add_handler(
+    MessageHandler(
+        filters.TEXT & ~filters.COMMAND,
+        reward_post
+    )
+)
+
+# Product photos = posting reward
+app.add_handler(
+    MessageHandler(
+        filters.PHOTO,
+        reward_post
+    )
 )
 
 print("Bot is running...")

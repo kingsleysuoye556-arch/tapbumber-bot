@@ -15,7 +15,6 @@ MIN_WITHDRAW = 500.0
 ADMIN_PAYOUT_LIMIT = 500.0
 REFERRAL_BONUS = 10.0
 DATA_FILE = "data.json"
-# =================
 def load_data():
     if not os.path.exists(DATA_FILE):
         return {"users": {}, "withdrawals": [], "pending_activations": []}

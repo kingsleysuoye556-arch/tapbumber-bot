@@ -14,16 +14,17 @@ DATA_FILE = "coins.json"
 BANK_DETAILS = "Account: 2530258732\nBank: Access Bank"
 
 # =========================
-# TAPBUMBEr SETTINGS
+# TAPBUMBER SETTINGS
 # =========================
 
-TAP_VALUE = 0.02
+# Normal tap value
+TAP_VALUE = 0.002
 
-# Maximum coins a user can earn from tapping/bonus in one day
+# Maximum coins from normal tapping in one day
 DAILY_LIMIT_COINS = 1000.00
 
-# Daily bonus
-DAILY_BONUS_COINS = 50.00
+# One-time activation bonus
+ACTIVATION_BONUS_COINS = 1000.00
 
 # User withdrawal
 WITHDRAW_MIN_NAIRA = 500.00
@@ -73,8 +74,15 @@ def new_user():
         "coins": 0.0,
         "daily_coins": 0.0,
         "date": get_today(),
-        "last_bonus": "",
+
+        # One-time activation bonus
+        "activation_bonus_given": False,
+
         "activated": False,
+
+        # User information
+        "username": "No username",
+        "first_name": "",
 
         # Referral system
         "referrer": "",
@@ -117,7 +125,7 @@ def coins_to_naira(coins):
 def withdrawal_window_open():
     now = datetime.now()
 
-    # Monday=0 ... Friday=4
+    # Friday only
     if now.weekday() != 4:
         return False
 
@@ -137,6 +145,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = str(update.effective_user.id)
     user = ensure_user(user_id)
+
+    # Save Telegram username and name
+    user["username"] = update.effective_user.username or "No username"
+    user["first_name"] = update.effective_user.first_name or ""
+
+    save_coins(user_coins)
 
     # Check referral code
     if context.args:
@@ -171,25 +185,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     remaining = max(0, DAILY_LIMIT_COINS - daily_coins)
 
     keyboard = [
-        [InlineKeyboardButton(
-            "💰 TAP TO EARN +0.02",
-            callback_data="tap"
-        )],
+        [
+            InlineKeyboardButton(
+                "💰 TAP TO EARN +0.002",
+                callback_data="tap"
+            )
+        ],
 
-        [InlineKeyboardButton(
-            "🎁 DAILY BONUS +50",
-            callback_data="daily"
-        )],
+        [
+            InlineKeyboardButton(
+                "👛 WALLET",
+                callback_data="wallet"
+            )
+        ],
 
-        [InlineKeyboardButton(
-            "👛 WALLET",
-            callback_data="wallet"
-        )],
-
-        [InlineKeyboardButton(
-            "👥 REFER",
-            callback_data="refer"
-        )]
+        [
+            InlineKeyboardButton(
+                "👥 REFER",
+                callback_data="refer"
+            )
+        ]
     ]
 
     if activated:
@@ -221,10 +236,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         caption=(
             "*Welcome to TAP TO EARN!*\n\n"
-            f"Your Coins: {coins:.2f} 🪙\n"
+            f"Your Coins: {coins:.3f} 🪙\n"
             f"≈ ₦{net_naira:.2f} after 20% fee\n"
-            f"Today Earned: {daily_coins:.2f}/{DAILY_LIMIT_COINS:.2f}\n"
-            f"Remaining: {remaining:.2f}\n"
+            f"Today Earned: {daily_coins:.3f}/{DAILY_LIMIT_COINS:.0f}\n"
+            f"Remaining: {remaining:.3f}\n"
             f"Status: {'✅ Activated' if activated else '❌ Not Activated'}"
         ),
 
@@ -243,11 +258,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
     user_id = str(query.from_user.id)
-    today = get_today()
 
     await query.answer()
 
     user = ensure_user(user_id)
+
+    # Keep username updated
+    user["username"] = query.from_user.username or "No username"
+    user["first_name"] = query.from_user.first_name or ""
 
     coins = user["coins"]
 
@@ -257,6 +275,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =========================
 
     if query.data == "tap":
+
+        if not user.get("activated", False):
+            await query.answer(
+                "🔒 Please activate your account first.",
+                show_alert=True
+            )
+            return
 
         if user["daily_coins"] + TAP_VALUE > DAILY_LIMIT_COINS:
             await query.answer(
@@ -272,44 +297,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await asyncio.sleep(0.2)
         await start(update, context)
-
-
-    # =========================
-    # DAILY BONUS
-    # =========================
-
-    elif query.data == "daily":
-
-        if user.get("last_bonus", "") == today:
-
-            await query.answer(
-                "❌ You already claimed today's bonus!",
-                show_alert=True
-            )
-
-        else:
-
-            if user["daily_coins"] + DAILY_BONUS_COINS > DAILY_LIMIT_COINS:
-
-                await query.answer(
-                    "⚠️ Daily limit would be exceeded.",
-                    show_alert=True
-                )
-
-            else:
-
-                user["coins"] += DAILY_BONUS_COINS
-                user["daily_coins"] += DAILY_BONUS_COINS
-                user["last_bonus"] = today
-
-                save_coins(user_coins)
-
-                await query.answer(
-                    f"🎁 Daily Bonus Claimed! +{DAILY_BONUS_COINS:.0f} coins",
-                    show_alert=True
-                )
-
-                await start(update, context)
 
 
     # =========================
@@ -385,7 +372,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # Convert the ₦500 minimum to coins
+        # Convert ₦500 minimum to coins
         minimum_coins = (
             WITHDRAW_MIN_NAIRA / NAIRA_RATE
         ) * DAILY_LIMIT_COINS
@@ -463,7 +450,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             caption=(
                 "*👛 YOUR WALLET*\n\n"
-                f"Total Coins: {coins:.2f} 🪙\n"
+                f"Total Coins: {coins:.3f} 🪙\n"
                 f"Gross Value: ₦{gross_naira:.2f}\n"
                 f"After 20% Fee: ₦{net_naira:.2f}\n"
                 f"Status: {'✅ Activated' if activated else '❌ Not Activated'}\n\n"
@@ -561,24 +548,24 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if u.get("activated", False)
         )
 
-        active_referrals = 0
-
-        for u in user_coins.values():
-            if u.get("activated", False):
-                active_referrals += 1
-
         await query.edit_message_caption(
 
             caption=(
                 "*👑 ADMIN PANEL*\n\n"
                 f"Total Users: {total_users}\n"
                 f"Activated Users: {activated_users}\n"
-                f"Total Coins: {total_coins:.2f} 🪙\n\n"
+                f"Total Coins: {total_coins:.3f} 🪙\n\n"
                 f"Management Withdrawal: "
                 f"₦{MANAGEMENT_WITHDRAW_NAIRA:.0f}"
             ),
 
             reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton(
+                        "👥 USERS",
+                        callback_data="users"
+                    )
+                ],
                 [
                     InlineKeyboardButton(
                         "⬅️ BACK",
@@ -589,6 +576,110 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             parse_mode="Markdown"
         )
+
+
+    # =========================
+    # ADMIN USERS
+    # =========================
+
+    elif query.data == "users" and query.from_user.id == ADMIN_ID:
+
+        if not user_coins:
+
+            await query.answer(
+                "No users registered yet.",
+                show_alert=True
+            )
+            return
+
+        users_text = "👥 *TAP BUMBER USERS*\n\n"
+
+        for number, (uid, u) in enumerate(
+            user_coins.items(),
+            start=1
+        ):
+
+            username = u.get(
+                "username",
+                "No username"
+            )
+
+            first_name = u.get(
+                "first_name",
+                ""
+            )
+
+            coins_balance = u.get(
+                "coins",
+                0.0
+            )
+
+            activated = u.get(
+                "activated",
+                False
+            )
+
+            users_text += (
+                f"*{number}. {first_name}*\n"
+                f"Username: @{username}\n"
+                f"Telegram ID: `{uid}`\n"
+                f"Coins: {coins_balance:.3f} 🪙\n"
+                f"Status: "
+                f"{'✅ Activated' if activated else '❌ Not Activated'}\n\n"
+            )
+
+        # Telegram message length protection
+        if len(users_text) > 4000:
+
+            parts = []
+            current = ""
+
+            for line in users_text.splitlines(True):
+
+                if len(current) + len(line) > 3800:
+                    parts.append(current)
+                    current = ""
+
+                current += line
+
+            if current:
+                parts.append(current)
+
+            await query.edit_message_caption(
+                caption=parts[0],
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton(
+                            "⬅️ ADMIN PANEL",
+                            callback_data="admin"
+                        )
+                    ]
+                ]),
+                parse_mode="Markdown"
+            )
+
+            for part in parts[1:]:
+
+                await context.bot.send_message(
+                    chat_id=query.from_user.id,
+                    text=part,
+                    parse_mode="Markdown"
+                )
+
+        else:
+
+            await query.edit_message_caption(
+                caption=users_text,
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton(
+                            "⬅️ ADMIN PANEL",
+                            callback_data="admin"
+                        )
+                    ]
+                ]),
+                parse_mode="Markdown"
+            )
 
 
     # =========================
@@ -634,31 +725,50 @@ async def activate_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # =========================
+    # ACTIVATE USER
+    # =========================
+
     target["activated"] = True
+
+    # =========================
+    # ONE-TIME ACTIVATION BONUS
+    # =========================
+
+    if not target.get(
+        "activation_bonus_given",
+        False
+    ):
+
+        target["coins"] += ACTIVATION_BONUS_COINS
+
+        target["activation_bonus_given"] = True
 
     # =========================
     # ACTIVE REFERRAL BONUS
     # =========================
 
-    referrer_id = target.get("referrer", "")
+    referrer_id = target.get(
+        "referrer",
+        ""
+    )
 
     if (
         referrer_id
         and referrer_id in user_coins
-        and not target.get("referral_reward_paid", False)
+        and not target.get(
+            "referral_reward_paid",
+            False
+        )
     ):
 
-        referrer = ensure_user(referrer_id)
+        referrer = ensure_user(
+            referrer_id
+        )
 
         referrer["coins"] += ACTIVE_REFERRAL_BONUS
 
-        # Referral reward is added to the referrer's
-        # balance. It does not exceed the daily tapping
-        # limit because it is a referral reward.
-
         target["referral_reward_paid"] = True
-
-        save_coins(user_coins)
 
         try:
 
@@ -677,8 +787,29 @@ async def activate_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     save_coins(user_coins)
 
+    # Notify activated user
+    try:
+
+        await context.bot.send_message(
+            chat_id=int(target_id),
+            text=(
+                "🎉 *ACCOUNT ACTIVATED!*\n\n"
+                "Your account has been activated successfully.\n\n"
+                "🎁 *One-time activation bonus:*\n"
+                "1,000 coins 🪙\n\n"
+                "This bonus is given only once.\n"
+                "From the next day, continue with normal tapping."
+            ),
+            parse_mode="Markdown"
+        )
+
+    except Exception:
+        pass
+
     await update.message.reply_text(
-        f"✅ User `{target_id}` has been activated.",
+        f"✅ User `{target_id}` has been activated.\n\n"
+        f"🎁 One-time activation bonus: "
+        f"+{ACTIVATION_BONUS_COINS:.0f} coins",
         parse_mode="Markdown"
     )
 

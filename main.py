@@ -1,3 +1,4 @@
+
 import os
 import json
 from datetime import datetime, time
@@ -8,16 +9,18 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 ADMIN_ID = 8930135604
 
+TAP_IMAGE_URL = "https://files.catbox.moe/es
+ADMIN_ID = 8930135604
+
 TAP_IMAGE_URL = "https://files.catbox.moe/esoo5t.png"
 TAP_VALUE = 0.020
-TAPS_PER_DAY = 50
-ACTIVATION_FEE = 100.0
+TAPS_PER_DAY = 500
+ACTIVATION_FEE = 1500.0
 MIN_WITHDRAW = 500.0
-ADMIN_PAYOUT_LIMIT = 5000.0
+ADMIN_PAYOUT_LIMIT = 500.0
 REFERRAL_BONUS = 10.0
 DATA_FILE = "data.json"
-# ====================
-
+# =================
 def load_data():
     if not os.path.exists(DATA_FILE):
         return {"users": {}, "withdrawals": [], "pending_activations": []}

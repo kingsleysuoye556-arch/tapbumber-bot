@@ -11,7 +11,8 @@ ADMIN_ID = 8930135604
 LOGO_URL = "https://files.catbox.moe/2e6zd1.jpg"
 DATA_FILE = "coins.json"
 
-BANK_DETAILS = "Account: 2530258732\nBank: Access Bank"
+# Activation payment details
+BANK_DETAILS = "Account: 1530258732\nBank: Access Bank\nAccount Name: Kingsley Suoye"
 
 # =========================
 # TAPBUMBER SETTINGS
@@ -20,18 +21,18 @@ BANK_DETAILS = "Account: 2530258732\nBank: Access Bank"
 # Normal tap value
 TAP_VALUE = 0.002
 
-# Maximum coins from normal tapping in one day
-DAILY_LIMIT_COINS = 1000.00
+# FREE MODE
+FREE_DAILY_LIMIT_COINS = 50.00
 
-# One-time activation bonus
-ACTIVATION_BONUS_COINS = 1000.00
+# ACTIVATED MODE
+ACTIVATED_DAILY_LIMIT_COINS = 1000.00
 
 # User withdrawal
 WITHDRAW_MIN_NAIRA = 500.00
 
 # Conversion
 NAIRA_RATE = 200.00
-COINS_PER_NAIRA = DAILY_LIMIT_COINS / NAIRA_RATE
+COINS_PER_NAIRA = ACTIVATED_DAILY_LIMIT_COINS / NAIRA_RATE
 
 # Activation
 ACTIVATION_FEE_NAIRA = 1500
@@ -75,9 +76,6 @@ def new_user():
         "daily_coins": 0.0,
         "date": get_today(),
 
-        # One-time activation bonus
-        "activation_bonus_given": False,
-
         "activated": False,
 
         # User information
@@ -103,7 +101,6 @@ def ensure_user(user_id):
     if user_id not in user_coins:
         user_coins[user_id] = new_user()
 
-    # Add missing fields to old accounts
     defaults = new_user()
 
     for key, value in defaults.items():
@@ -118,8 +115,14 @@ def ensure_user(user_id):
     return user_coins[user_id]
 
 
+def get_daily_limit(user):
+    if user.get("activated", False):
+        return ACTIVATED_DAILY_LIMIT_COINS
+    return FREE_DAILY_LIMIT_COINS
+
+
 def coins_to_naira(coins):
-    return (coins / DAILY_LIMIT_COINS) * NAIRA_RATE
+    return (coins / ACTIVATED_DAILY_LIMIT_COINS) * NAIRA_RATE
 
 
 def withdrawal_window_open():
@@ -179,10 +182,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     daily_coins = user["daily_coins"]
     activated = user.get("activated", False)
 
+    daily_limit = get_daily_limit(user)
+
     gross_naira = coins_to_naira(coins)
     net_naira = gross_naira * (1 - ADMIN_FEE)
 
-    remaining = max(0, DAILY_LIMIT_COINS - daily_coins)
+    remaining = max(0, daily_limit - daily_coins)
 
     keyboard = [
         [
@@ -230,17 +235,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         ])
 
+    mode_text = (
+        "💰 ACTIVATED MODE"
+        if activated
+        else "🆓 FREE MODE"
+    )
+
     await context.bot.send_photo(
         chat_id=update.effective_chat.id,
         photo=LOGO_URL,
 
         caption=(
-            "*Welcome to TAP TO EARN!*\n\n"
+            "*Welcome to TAP BUMBER!*\n\n"
+            f"Mode: {mode_text}\n"
             f"Your Coins: {coins:.3f} 🪙\n"
             f"≈ ₦{net_naira:.2f} after 20% fee\n"
-            f"Today Earned: {daily_coins:.3f}/{DAILY_LIMIT_COINS:.0f}\n"
+            f"Today Earned: {daily_coins:.3f}/{daily_limit:.0f}\n"
             f"Remaining: {remaining:.3f}\n"
-            f"Status: {'✅ Activated' if activated else '❌ Not Activated'}"
+            f"Status: {'✅ Activated' if activated else '🆓 Free'}"
         ),
 
         reply_markup=InlineKeyboardMarkup(keyboard),
@@ -276,16 +288,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "tap":
 
-        if not user.get("activated", False):
-            await query.answer(
-                "🔒 Please activate your account first.",
-                show_alert=True
-            )
-            return
+        daily_limit = get_daily_limit(user)
 
-        if user["daily_coins"] + TAP_VALUE > DAILY_LIMIT_COINS:
+        if user["daily_coins"] + TAP_VALUE > daily_limit:
             await query.answer(
-                "⚠️ Daily limit reached! 1,000 coins maximum today.",
+                f"⚠️ Daily limit reached! "
+                f"{daily_limit:.0f} coins maximum today.",
                 show_alert=True
             )
             return
@@ -311,8 +319,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"*🔒 ACCOUNT ACTIVATION*\n\n"
                 f"Activation Fee: ₦{ACTIVATION_FEE_NAIRA}\n\n"
                 f"`{BANK_DETAILS}`\n\n"
+                "⚠️ Payment account details are provided "
+                "by *Tap Bumber Admin ONLY*.\n\n"
                 "After payment, tap *I HAVE PAID* below.\n"
-                "Admin will review your payment."
+                "Admin will verify your payment and activate "
+                "your account."
             ),
 
             reply_markup=InlineKeyboardMarkup([
@@ -345,14 +356,15 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=(
                 "📩 *ACTIVATION PAYMENT REQUEST*\n\n"
                 f"User ID: `{user_id}`\n"
-                f"Username: @{query.from_user.username or 'No username'}\n\n"
+                f"Username: @{query.from_user.username or 'No username'}\n"
+                f"Name: {query.from_user.first_name or 'No name'}\n\n"
                 "Please verify payment and activate the user."
             ),
             parse_mode="Markdown"
         )
 
         await query.answer(
-            "📩 Payment notice sent to management. "
+            "📩 Payment notice sent to Tap Bumber Admin. "
             "Your account will be activated after verification.",
             show_alert=True
         )
@@ -375,7 +387,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Convert ₦500 minimum to coins
         minimum_coins = (
             WITHDRAW_MIN_NAIRA / NAIRA_RATE
-        ) * DAILY_LIMIT_COINS
+        ) * ACTIVATED_DAILY_LIMIT_COINS
 
         if coins < minimum_coins:
 
@@ -409,7 +421,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "💸 *WITHDRAWAL REQUEST*\n\n"
                 f"User ID: `{user_id}`\n"
                 f"Username: @{query.from_user.username or 'No username'}\n"
-                f"Coins: {coins:.2f}\n"
+                f"Name: {query.from_user.first_name or 'No name'}\n"
+                f"Coins: {coins:.3f}\n"
                 f"Gross: ₦{gross_naira:.2f}\n"
                 f"Fee: ₦{fee:.2f}\n"
                 f"Pay User: ₦{net_naira:.2f}"
@@ -446,6 +459,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         activated = user.get("activated", False)
 
+        daily_limit = get_daily_limit(user)
+
         await query.edit_message_caption(
 
             caption=(
@@ -453,8 +468,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Total Coins: {coins:.3f} 🪙\n"
                 f"Gross Value: ₦{gross_naira:.2f}\n"
                 f"After 20% Fee: ₦{net_naira:.2f}\n"
-                f"Status: {'✅ Activated' if activated else '❌ Not Activated'}\n\n"
-                f"Rate: {DAILY_LIMIT_COINS:.0f} coins = ₦{NAIRA_RATE:.0f}\n"
+                f"Mode: "
+                f"{'💰 Activated' if activated else '🆓 Free'}\n"
+                f"Daily Limit: {daily_limit:.0f} coins\n\n"
+                f"Rate: {ACTIVATED_DAILY_LIMIT_COINS:.0f} coins = "
+                f"₦{NAIRA_RATE:.0f}\n"
                 f"Minimum Withdrawal: ₦{WITHDRAW_MIN_NAIRA:.0f}\n"
                 "Withdrawal: Friday 7:00 PM–9:00 PM\n"
                 "Admin Fee: 20%"
@@ -548,11 +566,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if u.get("activated", False)
         )
 
+        free_users = total_users - activated_users
+
         await query.edit_message_caption(
 
             caption=(
-                "*👑 ADMIN PANEL*\n\n"
+                "*👑 TAP BUMBER ADMIN PANEL*\n\n"
                 f"Total Users: {total_users}\n"
+                f"Free Users: {free_users}\n"
                 f"Activated Users: {activated_users}\n"
                 f"Total Coins: {total_coins:.3f} 🪙\n\n"
                 f"Management Withdrawal: "
@@ -625,7 +646,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Telegram ID: `{uid}`\n"
                 f"Coins: {coins_balance:.3f} 🪙\n"
                 f"Status: "
-                f"{'✅ Activated' if activated else '❌ Not Activated'}\n\n"
+                f"{'✅ Activated' if activated else '🆓 Free'}\n\n"
             )
 
         # Telegram message length protection
@@ -729,20 +750,12 @@ async def activate_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ACTIVATE USER
     # =========================
 
+    # Remove/reset free-mode balance
+    target["coins"] = 0.0
+    target["daily_coins"] = 0.0
+
+    # Start activated mode
     target["activated"] = True
-
-    # =========================
-    # ONE-TIME ACTIVATION BONUS
-    # =========================
-
-    if not target.get(
-        "activation_bonus_given",
-        False
-    ):
-
-        target["coins"] += ACTIVATION_BONUS_COINS
-
-        target["activation_bonus_given"] = True
 
     # =========================
     # ACTIVE REFERRAL BONUS
@@ -794,11 +807,11 @@ async def activate_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=int(target_id),
             text=(
                 "🎉 *ACCOUNT ACTIVATED!*\n\n"
-                "Your account has been activated successfully.\n\n"
-                "🎁 *One-time activation bonus:*\n"
-                "1,000 coins 🪙\n\n"
-                "This bonus is given only once.\n"
-                "From the next day, continue with normal tapping."
+                "Your free-mode balance has been reset to 0.\n\n"
+                "💰 You are now in ACTIVATED MODE.\n"
+                "🪙 Daily tapping limit: 1,000 coins.\n"
+                "👆 Tap value: 0.002 coins.\n\n"
+                "You can now start earning normally."
             ),
             parse_mode="Markdown"
         )
@@ -808,8 +821,8 @@ async def activate_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"✅ User `{target_id}` has been activated.\n\n"
-        f"🎁 One-time activation bonus: "
-        f"+{ACTIVATION_BONUS_COINS:.0f} coins",
+        "🆓 Free balance reset to 0.\n"
+        "💰 Activated mode: 1,000 coins daily limit.",
         parse_mode="Markdown"
     )
 

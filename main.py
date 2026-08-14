@@ -503,7 +503,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     save_data(data)
 
-async def show_main_menu(update_or_query, context,user):
+async def show_main_menu(update_or_query, context, user):
+    pass
 
 
 # ============================================================

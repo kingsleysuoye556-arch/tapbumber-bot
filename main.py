@@ -407,6 +407,21 @@ async def show_main_menu(update_or_query, context, user):
         ]
     ]
 
+        # 👑 ADMIN PANEL - ADMIN ONLY
+    user_id = str(
+        update_or_query.effective_user.id
+        if isinstance(update_or_query, Update)
+        else update_or_query.from_user.id
+    )
+
+    if user_id == str(ADMIN_ID):
+        keyboard.append([
+            InlineKeyboardButton(
+                "👑 Admin Panel",
+                callback_data="admin"
+            )
+        ])
+
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     activation_status = (

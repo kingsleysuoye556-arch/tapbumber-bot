@@ -41,7 +41,7 @@ PAYOUT_END = time(7, 30)
 DAILY_RESET_HOUR = 17  # 5:00 PM
 
 DATA_FILE = "data.json"
-
+TAP_IMAGE_URL = "https://files.catbox.moe/esoo5t.png"
 
 # ============================================================
 # DATABASE

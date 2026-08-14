@@ -63,26 +63,56 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_data(data)
     await show_main_menu(update, context, user)
 
-# FIXED: Accepts Update
 async def show_main_menu(update_or_query, context, user):
     keyboard = [
-        [InlineKeyboardButton(f"TAP +{TAP_VALUE}", callback_data="tap")],
-        [InlineKeyboardButton("💰 Balance", callback_data="balance"), InlineKeyboardButton("👥 Refer", callback_data="refer")],
-        [InlineKeyboardButton("🆔 My ID", callback_data="myid"), InlineKeyboardButton("🔑 Activation", callback_data="activation")],
-        [InlineKeyboardButton("💸 Withdraw", callback_data="withdraw")]
+        [InlineKeyboardButton(
+            f"🟡 TAP +{TAP_VALUE} 🟡",
+            callback_data="tap"
+        )],
+        [
+            InlineKeyboardButton("💰 Balance", callback_data="balance"),
+            InlineKeyboardButton("👥 Refer", callback_data="refer")
+        ],
+        [
+            InlineKeyboardButton("🆔 My ID", callback_data="myid"),
+            InlineKeyboardButton("🔑 Activation", callback_data="activation")
+        ],
+        [
+            InlineKeyboardButton("💸 Withdraw", callback_data="withdraw")
+        ]
     ]
-    
-    user_id = update_or_query.effective_user.id
-    if str(user_id) == str(ADMIN_ID):
-        keyboard.append([InlineKeyboardButton("👑 Admin Panel", callback_data="admin")])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    caption = f"⚡ TAP EARN BOT ⚡\n\n💰 Balance: ₦{user['balance']:.3f}\n📊 Taps Today: {user['taps_today']}/{TAPS_PER_DAY}\n🔑 Status: {'Activated' if user['activated'] else 'Not Activated'}"
 
-    if update_or_query.message:
-        await update_or_query.message.reply_photo(photo=TAP_IMAGE_URL, caption=caption, reply_markup=reply_markup)
+    text = f"""
+💰 *Welcome back!*
+
+*Your Balance:* `{user[2]}` COINS
+*Daily Limit:* `{TAPS_PER_DAY}` taps
+*Used Today:* `{user[6]}` / `{TAPS_PER_DAY}`
+"""
+
+    if isinstance(update_or_query, Update):
+        await update_or_query.message.reply_photo(
+            photo=TAP_IMAGE_URL,
+            caption=text,
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
     else:
-        await update_or_query.callback_query.edit_message_caption(caption=caption, reply_markup=reply_markup)
+        try:
+            await update_or_query.edit_message_caption(
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
+            )
+        except Exception:
+            await update_or_query.message.reply_photo(
+                photo=TAP_IMAGE_URL,
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
+            )
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query

@@ -243,16 +243,10 @@ def cycle_end_time(cycle_number):
 
 def claim_available(user):
     """
-    A user can claim the current completed 2-hour cycle.
+    Returns the completed cycle that is currently available to claim.
 
-    The current cycle must have reached its end.
-    We also allow the previous cycle to remain claimable
-    only inside the next cycle's window.
-
-    Example:
-    5-7 PM cycle becomes claimable at 7 PM.
-    It can be claimed until 9 PM.
-    After 9 PM it expires.
+    A cycle becomes claimable only after its 2-hour period has ended.
+    The reward remains claimable for one additional cycle (2 hours).
     """
 
     now = now_local()
@@ -261,23 +255,22 @@ def claim_available(user):
 
     current_cycle = get_cycle_number(user)
 
-    # At the exact beginning of a cycle, previous cycle is the
-    # cycle that has just completed.
-    if now >= cycle_start_time(current_cycle):
-        completed_cycle = current_cycle - 1
-    else:
-        completed_cycle = current_cycle - 1
-
-    if completed_cycle < 1:
+    # No completed cycle before Cycle 1
+    if current_cycle <= 1:
         return None
+
+    # The cycle immediately before the current cycle has completed.
+    completed_cycle = current_cycle - 1
 
     start = cycle_start_time(completed_cycle)
     end = cycle_end_time(completed_cycle)
 
-    claim_deadline = end + timedelta(hours=CYCLE_HOURS)
-
+    # The completed cycle must actually be finished.
     if now < end:
         return None
+
+    # Reward expires after one additional cycle.
+    claim_deadline = end + timedelta(hours=CYCLE_HOURS)
 
     if now > claim_deadline:
         return None

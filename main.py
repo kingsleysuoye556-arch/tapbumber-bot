@@ -503,9 +503,56 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     save_data(data)
 
-async def show_main_menu(update_or_query, context, user):
-    pass
 
+# ============================================================
+# MAIN MENU
+# ============================================================
+
+async def show_main_menu(update_or_query, context, user):
+
+    keyboard = [
+        [
+            InlineKeyboardButton("🟡 TAP +0.020", callback_data="tap"),
+            InlineKeyboardButton("💰 Balance", callback_data="balance")
+        ],
+        [
+            InlineKeyboardButton("🎁 Claim ₦30", callback_data="claim"),
+            InlineKeyboardButton("🔑 Activation", callback_data="activation")
+        ],
+        [
+            InlineKeyboardButton("👥 Refer", callback_data="refer"),
+            InlineKeyboardButton("🆔 My ID", callback_data="myid")
+        ],
+        [
+            InlineKeyboardButton("💸 Withdraw", callback_data="withdraw")
+        ]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    text = (
+        "💰 *TAPBUMBER*\n\n"
+        f"🔐 Status: "
+        f"*{'✅ ACTIVATED' if user['activated'] else '❌ NOT ACTIVATED'}*\n"
+        f"💵 Balance: *₦{user['balance']:.2f}*\n"
+        f"📊 Today's earned: *₦{user['daily_earned']:.2f}*\n"
+        f"🏆 Today's cycles: "
+        f"*{user['daily_cycles_claimed']}/12*\n\n"
+        "👇 Choose an option below:"
+    )
+
+    if hasattr(update_or_query, "edit_message_text"):
+        await update_or_query.edit_message_text(
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    else:
+        await update_or_query.message.reply_text(
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
 
 # ============================================================
 # BUTTON HANDLER

@@ -461,12 +461,11 @@ async def show_main_menu(update_or_query, context, user):
                 text=text,
                 reply_markup=reply_markup,
                 parse_mode="Markdown"
-            )
-
-
-# ============================================================
+ #
+==========================================
 # START
-# ============================================================
+#
+==========================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
@@ -488,7 +487,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_id = str(telegram_user.id)
 
         if (
-            referrer_id != current_id
+            referrer_id!= current_id
             and user["referrer"] is None
             and referrer_id in data["users"]
         ):
@@ -503,6 +502,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     save_data(data)
 
+    await show_main_menu(update, context, user)   
 
 # ============================================================
 # BUTTON HANDLER

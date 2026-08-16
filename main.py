@@ -1436,3 +1436,109 @@ def main():
 
 if __name__ == "__main__":
     main()
+if current_cycle <= 1: return None
+    completed_cycle = current_cycle - 1
+    start = cycle_start_time(completed_cycle)
+    end = cycle_end_time(completed_cycle)
+    if now < end: return None
+    claim_deadline = end + timedelta(hours=CYCLE_HOURS)
+    if now > claim_deadline: return None
+    return completed_cycle
+
+# ============================================================
+# PAYOUT TIME
+# ============================================================
+
+def is_payout_date(now=None):
+    if now is None: now = now_local()
+    if now.day == 14: return True
+    if now.day == 30: return True
+    return False
+
+def is_withdraw_time():
+    now = now_local()
+    if not is_payout_date(now): return False
+    return PAYOUT_START <= now.time() <= PAYOUT_END
+
+# ============================================================
+# MONEY CALCULATIONS
+# ============================================================
+
+def calculate_withdrawal(amount):
+    fee = round(amount * WITHDRAWAL_FEE_PERCENT / 100, 2)
+    net = round(amount - fee, 2)
+    return fee, net
+# ============================================================
+# MAIN MENU
+# ============================================================
+
+async def show_main_menu(update_or_query, context, user):
+    data = load_data()
+    initialize_daily_cycle(user)
+    save_data(data)
+    now = now_local()
+    current_cycle = get_cycle_number(user)
+    next_cycle_start = cycle_start_time(current_cycle + 1)
+    if current_cycle >= 12: next_cycle_start = daily_cycle_start(now) + timedelta(days=1)
+    remaining = next_cycle_start - now
+    if remaining.total_seconds() < 0: remaining = timedelta(seconds=0)
+    hours = int(remaining.total_seconds() // 3600)
+    minutes = int((remaining.total_seconds() % 3600) // 60)
+    claim_cycle = claim_available(user)
+
+    if claim_cycle:
+        claim_text = f"🎁 *₦{REWARD_PER_CYCLE:.0f} reward is ready to claim!*\nCycle: {claim_cycle}/12"
+        button_text = f"🎁 CLAIM ₦{REWARD_PER_CYCLE:.0f}"
+        callback = "claim"
+    else:
+        claim_text = "⏳ No completed cycle ready to claim."
+        button_text = "🟡 AUTO TAP — ACTIVE"
+        callback = "claim"
+
+    keyboard = [
+        [InlineKeyboardButton(button_text, callback_data=callback)],
+        [InlineKeyboardButton("💰 Balance", callback_data="balance"), InlineKeyboardButton("👥 Refer", callback_data="refer")],
+        [InlineKeyboardButton("🆔 My ID", callback_data="myid"), InlineKeyboardButton("🔑 Activation", callback_data="activation")],
+        [InlineKeyboardButton("💸 Withdraw", callback_data="withdraw")]
+    ]
+    user_id = str(update_or_query.effective_user.id if isinstance(update_or_query, Update) else update_or_query.from_user.id)
+    if user_id == str(ADMIN_ID):
+        keyboard.append([InlineKeyboardButton("👑 Admin Panel", callback_data="admin")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    activation_status = "✅ ACTIVATED" if user["activated"] else "❌ NOT ACTIVATED"
+    text = (
+        "💰 *TAPBUMBER*\n\n"
+        f"🔐 Status: *{activation_status}*\n"
+        f"💵 Balance: *₦{user['balance']:.2f}*\n\n"
+        f"⏰ Cycle: *{current_cycle}/12*\n"
+        f"🎁 Reward per cycle: *₦{REWARD_PER_CYCLE:.0f}*\n"
+        f"📊 Today's earned: *₦{user['daily_earned']:.2f}*\n"
+        f"🏆 Today's cycles: *{user['daily_cycles_claimed']}/12*\n\n"
+        f"⏳ Next cycle: *{hours}h {minutes}m*\n"
+        f"{claim_text}\n\n"
+        "🕔 Daily reset: *5:00 PM WAT*"
+    )
+    if isinstance(update_or_query, Update):
+        await update_or_query.message.reply_text(text=text, reply_markup=reply_markup, parse_mode="Markdown")
+    else:
+        try: await update_or_query.edit_message_text(text=text, reply_markup=reply_markup, parse_mode="Markdown")
+        except Exception: await update_or_query.message.reply_text(text=text, reply_markup=reply_markup, parse_mode="Markdown")
+
+# ============================================================
+# START
+# ============================================================
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_data()
+    telegram_user = update.effective_user
+    user = get_user(data, telegram_user.id, telegram_user.first_name)
+    args = context.args
+    if args:
+        referrer_id = str(args[0])
+        current_id = str(telegram_user.id)
+        if referrer_id!= current_id and user["referrer"] is None and referrer_id in data["users"]:
+            user["referrer"] = referrer_id
+            if current_id not in data["users"][referrer_id]["referrals"]:
+                data["users"][referrer_id]["referrals"].append(current_id)
+    initialize_daily_cycle(user)
+    save_data(data)
+    await show_main_menu(update, context, user)

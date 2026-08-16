@@ -1,3 +1,4 @@
+
 import os
 import json
 from datetime import datetime, timedelta, time
@@ -5,27 +6,23 @@ from zoneinfo import ZoneInfo
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-ApplicationBuilder,
-CommandHandler,
-CallbackQueryHandler,
-MessageHandler,
-ContextTypes,
-filters,
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
 )
 
-============================================================
-
-TAPBUMBER NEW SYSTEM
-
-============================================================
+# ============================================================
+# TAPBUMBER NEW SYSTEM
+# ============================================================
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 ADMIN_ID = 8930135604
 
-Nigeria / West Africa Time
-
+# Nigeria / West Africa Time
 TZ = ZoneInfo("Africa/Lagos")
-
 ---------------- SETTINGS ----------------
 
 ACTIVATION_FEE = 3000.0

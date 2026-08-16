@@ -347,6 +347,8 @@ async def show_main_menu(update_or_query, context, user):
 
      claim = claim_available(user)
 
+
+
     if claim is not None:
 
         claim_text = (

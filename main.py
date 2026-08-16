@@ -1,4 +1,3 @@
-
 import os
 import json
 from datetime import datetime, timedelta, time
@@ -23,6 +22,7 @@ ADMIN_ID = 8930135604
 
 # Nigeria / West Africa Time
 TZ = ZoneInfo("Africa/Lagos")
+
 ---------------- SETTINGS ----------------
 
 ACTIVATION_FEE = 3000.0

@@ -345,9 +345,7 @@ async def show_main_menu(update_or_query, context, user):
         (remaining.total_seconds() % 3600) // 60
     )
 
-     claim = claim_available(user)
-
-
+    claim = claim_available(user)
 
     if claim is not None:
 

@@ -42,49 +42,49 @@ DAILY_RESET_HOUR = 17  # 5:00 PM
 DATA_FILE = "data.json"
 TAP_IMAGE_URL = "https://files.catbox.moe/esoo5t.png"
 
-============================================================
-
-DATABASE
-
-============================================================
+# ============================================================
+# DATABASE
+# ============================================================
 
 def default_data():
-return {
-"users": {},
-"withdrawals": [],
-"pending_activations": []
-}
+    return {
+        "users": {},
+        "withdrawals": [],
+        "pending_activations": []
+    }
+
 
 def load_data():
-if not os.path.exists(DATA_FILE):
-return default_data()
+    if not os.path.exists(DATA_FILE):
+        return default_data()
 
-try:  
-    with open(DATA_FILE, "r", encoding="utf-8") as f:  
-        data = json.load(f)  
-except Exception:  
-    return default_data()  
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return default_data()
 
-if "users" not in data:  
-    data["users"] = {}  
+    if "users" not in data:
+        data["users"] = {}
 
-if "withdrawals" not in data:  
-    data["withdrawals"] = []  
+    if "withdrawals" not in data:
+        data["withdrawals"] = []
 
-if "pending_activations" not in data:  
-    data["pending_activations"] = []  
+    if "pending_activations" not in data:
+        data["pending_activations"] = []
 
-return data
+    return data
+
 
 def save_data(data):
-temp_file = DATA_FILE + ".tmp"
+    temp_file = DATA_FILE + ".tmp"
 
-with open(temp_file, "w", encoding="utf-8") as f:  
-    json.dump(data, f, indent=4)  
+    with open(temp_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
 
-os.replace(temp_file, DATA_FILE)
+    os.replace(temp_file, DATA_FILE)
 
-============================================================
+=========================================================
 
 USER DATA
 
@@ -155,122 +155,43 @@ return user
 
 TIME / CYCLE HELPERS
 
-============================================================
-
+============================================≠=======≠=======
 def now_local():
-return datetime.now(TZ)
+    return datetime.now(TZ)
+
 
 def daily_cycle_start(now=None):
-"""
-Daily earning period is:
-5:00 PM -> 5:00 PM next day
-"""
+    """
+    Daily earning period is:
+    5:00 PM -> 5:00 PM next day
+    """
 
-if now is None:  
-    now = now_local()  
+    if now is None:
+        now = now_local()
 
-reset_time = now.replace(  
-    hour=DAILY_RESET_HOUR,  
-    minute=0,  
-    second=0,  
-    microsecond=0  
-)  
+    reset_time = now.replace(
+        hour=DAILY_RESET_HOUR,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
 
-if now < reset_time:  
-    reset_time -= timedelta(days=1)  
+    if now < reset_time:
+        reset_time -= timedelta(days=1)
 
-return reset_time
+    return reset_time
 
-def daily_cycle_key(now=None):
-return daily_cycle_start(now).strftime("%Y-%m-%d")
-
-def initialize_daily_cycle(user):
-now = now_local()
-key = daily_cycle_key(now)
-
-if user.get("daily_cycle_date") != key:  
-    user["daily_cycle_date"] = key  
-    user["daily_cycles_claimed"] = 0  
-    user["daily_earned"] = 0.0  
-
-    # New daily cycle starts at 5 PM.  
-    user["cycle_anchor"] = daily_cycle_start(now).isoformat()  
-    user["current_cycle_claimed"] = False  
-    user["last_claim_time"] = None
-
-def get_cycle_number(user):
-"""
-Returns the current 2-hour cycle number.
-
-Cycle 1:  
-5 PM - 7 PM  
-
-Cycle 2:  
-7 PM - 9 PM  
-
-...  
-
-Cycle 12:  
-3 PM - 5 PM  
-"""  
-
-now = now_local()  
-start = daily_cycle_start(now)  
-
-elapsed_seconds = (now - start).total_seconds()  
-
-if elapsed_seconds < 0:  
-    return 1  
-
-cycle = int(elapsed_seconds // (CYCLE_HOURS * 3600)) + 1  
-
-return max(1, min(cycle, 12))
 
 def cycle_start_time(cycle_number):
-start = daily_cycle_start()
-return start + timedelta(
-hours=(cycle_number - 1) * CYCLE_HOURS
-)
+    return daily_cycle_start() + timedelta(
+        hours=(cycle_number - 1) * CYCLE_HOURS
+    )
+
 
 def cycle_end_time(cycle_number):
-return cycle_start_time(cycle_number) + timedelta(hours=CYCLE_HOURS)
-
-def claim_available(user):
-"""
-Returns the completed cycle that is currently available to claim.
-
-A cycle becomes claimable only after its 2-hour period has ended.  
-The reward remains claimable for one additional cycle (2 hours).  
-"""  
-
-now = now_local()  
-
-initialize_daily_cycle(user)  
-
-current_cycle = get_cycle_number(user)  
-
-# No completed cycle before Cycle 1  
-if current_cycle <= 1:  
-    return None  
-
-# The cycle immediately before the current cycle has completed.  
-completed_cycle = current_cycle - 1  
-
-start = cycle_start_time(completed_cycle)  
-end = cycle_end_time(completed_cycle)  
-
-# The completed cycle must actually be finished.  
-if now < end:  
-    return None  
-
-# Reward expires after one additional cycle.  
-claim_deadline = end + timedelta(hours=CYCLE_HOURS)  
-
-if now > claim_deadline:  
-    return None  
-
-return completed_cycle
-
+    return cycle_start_time(cycle_number) + timedelta(
+        hours=CYCLE_HOURS
+    )
 ============================================================
 
 PAYOUT TIME

@@ -158,27 +158,33 @@ def initialize_daily_cycle(user):
     key = daily_cycle_key(now)
 
     if user.get("daily_cycle_date") != key:
-
         user["daily_cycle_date"] = key
-
         user["daily_cycles_claimed"] = 0
         user["daily_earned"] = 0.0
 
-        user["cycle_anchor"] = daily_cycle_start(now).isoformat()
+        # The daily period starts at 5:00 PM WAT.
+        user["cycle_anchor"] = (
+            daily_cycle_start(now).isoformat()
+        )
 
         user["current_cycle_claimed"] = False
         user["last_claim_time"] = None
 
 
 def get_cycle_number(user):
-    now = now_local()
+    """
+    Returns the currently running 2-hour earning cycle.
 
+    Cycle 1: 5:00 PM - 7:00 PM
+    Cycle 2: 7:00 PM - 9:00 PM
+    ...
+    Cycle 12: 3:00 PM - 5:00 PM
+    """
+
+    now = now_local()
     start = daily_cycle_start(now)
 
     elapsed = (now - start).total_seconds()
-
-    if elapsed < 0:
-        return 1
 
     cycle = int(
         elapsed // (CYCLE_HOURS * 3600)
@@ -210,34 +216,57 @@ def cycle_end_time(number):
 # CLAIM SYSTEM
 # ============================================================
 
+CLAIM_WINDOW_MINUTES = 30
+
+
 def claim_available(user):
+    """
+    A cycle becomes claimable immediately after
+    its 2-hour earning period finishes.
+
+    The user then has 30 minutes to claim it.
+
+    Example:
+
+    5:00 - 7:00   Cycle 1 earning
+    7:00 - 7:30   Cycle 1 claim window
+
+    At 7:00, Cycle 2 starts earning immediately.
+    """
+
     now = now_local()
 
     initialize_daily_cycle(user)
 
     current = get_cycle_number(user)
 
+    # No completed cycle yet.
     if current <= 1:
         return None
 
     completed = current - 1
 
-    # Prevent claiming the same cycle twice.
+    # Already claimed all completed cycles.
     if completed <= user.get(
-        "daily_cycles_claimed", 0
+        "daily_cycles_claimed",
+        0
     ):
         return None
 
     end = cycle_end_time(completed)
 
+    # Cycle has not finished.
     if now < end:
         return None
 
-    # Claim window lasts until the next cycle finishes.
-    if now > end + timedelta(hours=CYCLE_HOURS):
+    # Claim window expired.
+    if now > end + timedelta(
+        minutes=CLAIM_WINDOW_MINUTES
+    ):
         return None
 
     return completed
+ 
 
 
 # ============================================================

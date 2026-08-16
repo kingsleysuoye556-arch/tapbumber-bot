@@ -466,42 +466,22 @@ async def show_main_menu(update_or_query, context, user):
 # START
 #
 ==========================================
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
-
     telegram_user = update.effective_user
+    user = get_user(data, telegram_user.id, telegram_user.first_name)
 
-    user = get_user(
-        data,
-        telegram_user.id,
-        telegram_user.first_name
-    )
-
-    # Referral link:
-    # /start REFERRER_ID
     args = context.args
-
     if args:
         referrer_id = str(args[0])
         current_id = str(telegram_user.id)
-
-        if (
-            referrer_id!= current_id
-            and user["referrer"] is None
-            and referrer_id in data["users"]
-        ):
+        if referrer_id!= current_id and user["referrer"] is None and referrer_id in data["users"]:
             user["referrer"] = referrer_id
-
             if current_id not in data["users"][referrer_id]["referrals"]:
-                data["users"][referrer_id]["referrals"].append(
-                    current_id
-                )
+                data["users"][referrer_id]["referrals"].append(current_id)
 
     initialize_daily_cycle(user)
-
     save_data(data)
-
     await show_main_menu(update, context, user)   
 
 # ============================================================

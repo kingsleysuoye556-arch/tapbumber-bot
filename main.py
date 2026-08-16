@@ -19,11 +19,10 @@ from telegram.ext import (
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 ADMIN_ID = 8930135604
-
 # Nigeria / West Africa Time
 TZ = ZoneInfo("Africa/Lagos")
 
----------------- SETTINGS ----------------
+# ---------------- SETTINGS ----------------
 
 ACTIVATION_FEE = 3000.0
 

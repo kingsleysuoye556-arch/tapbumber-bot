@@ -465,7 +465,7 @@ async def show_main_menu(update_or_query, context, user):
 ==========================================
 # START
 #
-==========================================
+==========================================  
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
     telegram_user = update.effective_user
@@ -482,8 +482,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     initialize_daily_cycle(user)
     save_data(data)
-    await show_main_menu(update, context, user)   
-
+    await show_main_menu(update, context, user)
 # ============================================================
 # BUTTON HANDLER
 # ============================================================

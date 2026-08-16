@@ -3,11 +3,7 @@ import json
 from datetime import datetime, timedelta, time
 from zoneinfo import ZoneInfo
 
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-)
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -22,7 +18,6 @@ from telegram.ext import (
 # ============================================================
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-
 ADMIN_ID = 8930135604
 
 TZ = ZoneInfo("Africa/Lagos")
@@ -54,7 +49,7 @@ def default_data():
     return {
         "users": {},
         "withdrawals": [],
-        "pending_activations": [],
+        "pending_activations": []
     }
 
 
@@ -118,7 +113,7 @@ def get_user(data, user_id, first_name=""):
             "total_referral_earned": 0.0,
             "total_withdrawn": 0.0,
 
-            "bank_info": "",
+            "bank_info": ""
         }
 
     user = data["users"][user_id]
@@ -130,7 +125,7 @@ def get_user(data, user_id, first_name=""):
 
 
 # ============================================================
-# TIME HELPERS
+# TIME / DAILY CYCLE
 # ============================================================
 
 def now_local():
@@ -145,7 +140,7 @@ def daily_cycle_start(now=None):
         hour=DAILY_RESET_HOUR,
         minute=0,
         second=0,
-        microsecond=0,
+        microsecond=0
     )
 
     if now < reset_time:
@@ -163,6 +158,7 @@ def initialize_daily_cycle(user):
     key = daily_cycle_key(now)
 
     if user.get("daily_cycle_date") != key:
+
         user["daily_cycle_date"] = key
 
         user["daily_cycles_claimed"] = 0
@@ -176,6 +172,7 @@ def initialize_daily_cycle(user):
 
 def get_cycle_number(user):
     now = now_local()
+
     start = daily_cycle_start(now)
 
     elapsed = (now - start).total_seconds()
@@ -183,83 +180,52 @@ def get_cycle_number(user):
     if elapsed < 0:
         return 1
 
-    cycle = int(elapsed // (CYCLE_HOURS * 3600)) + 1
+    cycle = int(
+        elapsed // (CYCLE_HOURS * 3600)
+    ) + 1
 
-    return max(1, min(cycle, TOTAL_CYCLES))
+    return max(
+        1,
+        min(cycle, TOTAL_CYCLES)
+    )
 
 
 def cycle_start_time(number):
     return (
         daily_cycle_start()
-        + timedelta(hours=(number - 1) * CYCLE_HOURS)
+        + timedelta(
+            hours=(number - 1) * CYCLE_HOURS
+        )
     )
 
 
 def cycle_end_time(number):
-    return cycle_start_time(number) + timedelta(
-        hours=CYCLE_HOURS
+    return (
+        cycle_start_time(number)
+        + timedelta(hours=CYCLE_HOURS)
     )
 
 
 # ============================================================
-# REWARD CLAIM LOGIC
+# CLAIM SYSTEM
 # ============================================================
 
 def claim_available(user):
-    """
-    Returns the completed cycle that can currently be claimed.
-
-    Cycle 1:
-        Nothing is ready.
-
-    Cycle 2:
-        Cycle 1 can be claimed.
-
-    Cycle 3:
-        Cycle 2 can be claimed.
-
-    ...
-
-    Cycle 12:
-        Cycle 11 can be claimed.
-
-    At the 5 PM reset:
-        The previous day's Cycle 12 can still be claimed
-        during the first cycle of the new day.
-    """
-
     now = now_local()
 
     initialize_daily_cycle(user)
 
     current = get_cycle_number(user)
 
-    claimed_count = int(
-        user.get("daily_cycles_claimed", 0)
-    )
+    if current <= 1:
+        return None
 
-    # First cycle of a new day.
-    # Allow the previous day's final cycle to be claimed.
-    if current == 1:
-        if claimed_count > 0:
-            return None
-
-        previous_cycle_end = daily_cycle_start(now)
-
-        if now < previous_cycle_end:
-            return None
-
-        if now > previous_cycle_end + timedelta(
-            hours=CYCLE_HOURS
-        ):
-            return None
-
-        return TOTAL_CYCLES
-
-    # Normal cycles.
     completed = current - 1
 
-    if completed <= claimed_count:
+    # Prevent claiming the same cycle twice.
+    if completed <= user.get(
+        "daily_cycles_claimed", 0
+    ):
         return None
 
     end = cycle_end_time(completed)
@@ -267,7 +233,7 @@ def claim_available(user):
     if now < end:
         return None
 
-    # Reward remains claimable for one cycle.
+    # Claim window lasts until the next cycle finishes.
     if now > end + timedelta(hours=CYCLE_HOURS):
         return None
 
@@ -297,10 +263,13 @@ def is_withdraw_time():
 def calculate_withdrawal(amount):
     fee = round(
         amount * WITHDRAWAL_FEE_PERCENT / 100,
-        2,
+        2
     )
 
-    net = round(amount - fee, 2)
+    net = round(
+        amount - fee,
+        2
+    )
 
     return fee, net
 
@@ -322,12 +291,17 @@ async def show_main_menu(update_or_query, context, user):
     current = get_cycle_number(user)
 
     if current >= TOTAL_CYCLES:
+
         next_start = (
             daily_cycle_start(now)
             + timedelta(days=1)
         )
+
     else:
-        next_start = cycle_start_time(current + 1)
+
+        next_start = cycle_start_time(
+            current + 1
+        )
 
     remaining = next_start - now
 
@@ -347,7 +321,8 @@ async def show_main_menu(update_or_query, context, user):
     if claim is not None:
 
         claim_text = (
-            f"🎁 *₦{REWARD_PER_CYCLE:.0f} reward is ready!*\n"
+            f"🎁 *₦{REWARD_PER_CYCLE:.0f} "
+            f"reward is ready!*\n"
             f"Cycle: {claim}/{TOTAL_CYCLES}"
         )
 
@@ -368,40 +343,38 @@ async def show_main_menu(update_or_query, context, user):
         [
             InlineKeyboardButton(
                 button_text,
-                callback_data="claim",
+                callback_data="claim"
             )
         ],
 
         [
             InlineKeyboardButton(
                 "💰 Balance",
-                callback_data="balance",
+                callback_data="balance"
             ),
-
             InlineKeyboardButton(
                 "👥 Refer",
-                callback_data="refer",
-            ),
+                callback_data="refer"
+            )
         ],
 
         [
             InlineKeyboardButton(
                 "🆔 My ID",
-                callback_data="myid",
+                callback_data="myid"
             ),
-
             InlineKeyboardButton(
                 "🔑 Activation",
-                callback_data="activation",
-            ),
+                callback_data="activation"
+            )
         ],
 
         [
             InlineKeyboardButton(
                 "💸 Withdraw",
-                callback_data="withdraw",
-            ),
-        ],
+                callback_data="withdraw"
+            )
+        ]
     ]
 
     if isinstance(update_or_query, Update):
@@ -419,7 +392,7 @@ async def show_main_menu(update_or_query, context, user):
             [
                 InlineKeyboardButton(
                     "👑 Admin Panel",
-                    callback_data="admin",
+                    callback_data="admin"
                 )
             ]
         )
@@ -434,11 +407,9 @@ async def show_main_menu(update_or_query, context, user):
         "💰 *TAPBUMBER*\n\n"
 
         f"🔐 Status: *{status}*\n"
-
         f"💵 Balance: *₦{user['balance']:.2f}*\n\n"
 
         f"⏰ Cycle: *{current}/{TOTAL_CYCLES}*\n"
-
         f"🎁 Reward per cycle: "
         f"*₦{REWARD_PER_CYCLE:.0f}*\n"
 
@@ -446,7 +417,8 @@ async def show_main_menu(update_or_query, context, user):
         f"*₦{user['daily_earned']:.2f}*\n"
 
         f"🏆 Today's cycles: "
-        f"*{user['daily_cycles_claimed']}/{TOTAL_CYCLES}*\n\n"
+        f"*{user['daily_cycles_claimed']}/"
+        f"{TOTAL_CYCLES}*\n\n"
 
         f"⏳ Next cycle: "
         f"*{hours}h {minutes}m*\n"
@@ -456,14 +428,16 @@ async def show_main_menu(update_or_query, context, user):
         "🕔 Daily reset: *5:00 PM WAT*"
     )
 
-    markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = InlineKeyboardMarkup(
+        keyboard
+    )
 
     if isinstance(update_or_query, Update):
 
         await update_or_query.message.reply_text(
             text=text,
-            reply_markup=markup,
-            parse_mode="Markdown",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
         )
 
     else:
@@ -472,16 +446,16 @@ async def show_main_menu(update_or_query, context, user):
 
             await update_or_query.edit_message_text(
                 text=text,
-                reply_markup=markup,
-                parse_mode="Markdown",
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
             )
 
         except Exception:
 
             await update_or_query.message.reply_text(
                 text=text,
-                reply_markup=markup,
-                parse_mode="Markdown",
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
             )
 
 
@@ -498,10 +472,10 @@ async def start(update, context):
     user = get_user(
         data,
         telegram_user.id,
-        telegram_user.first_name,
+        telegram_user.first_name
     )
 
-    # Referral
+    # Referral link
     if context.args:
 
         referrer_id = str(
@@ -536,7 +510,7 @@ async def start(update, context):
     await show_main_menu(
         update,
         context,
-        user,
+        user
     )
 
 
@@ -555,7 +529,7 @@ async def button(update, context):
     user = get_user(
         data,
         telegram_user.id,
-        telegram_user.first_name,
+        telegram_user.first_name
     )
 
     initialize_daily_cycle(user)
@@ -570,7 +544,7 @@ async def button(update, context):
 
             await query.answer(
                 "🔒 Activate your account first.",
-                show_alert=True,
+                show_alert=True
             )
 
             return
@@ -582,21 +556,8 @@ async def button(update, context):
             save_data(data)
 
             await query.answer(
-                "⏳ No reward is currently ready.",
-                show_alert=True,
-            )
-
-            return
-
-        # Safety check
-        if (
-            user["daily_cycles_claimed"]
-            >= TOTAL_CYCLES
-        ):
-
-            await query.answer(
-                "You have already claimed all today's rewards.",
-                show_alert=True,
+                "⏳ No completed cycle is ready.",
+                show_alert=True
             )
 
             return
@@ -613,19 +574,17 @@ async def button(update, context):
             now_local().isoformat()
         )
 
-        user["current_cycle_claimed"] = True
-
         save_data(data)
 
         await query.answer(
             f"✅ ₦{REWARD_PER_CYCLE:.0f} claimed!",
-            show_alert=True,
+            show_alert=True
         )
 
         await show_main_menu(
             query,
             context,
-            user,
+            user
         )
 
         return
@@ -665,13 +624,13 @@ async def button(update, context):
                     [
                         InlineKeyboardButton(
                             "⬅️ Back",
-                            callback_data="back",
+                            callback_data="back"
                         )
                     ]
                 ]
             ),
 
-            parse_mode="Markdown",
+            parse_mode="Markdown"
         )
 
         return
@@ -688,11 +647,8 @@ async def button(update, context):
 
             text=(
                 "🆔 *YOUR TELEGRAM ID*\n\n"
-
                 f"`{telegram_user.id}`\n\n"
-
-                f"👤 Name: "
-                f"{user['first_name']}"
+                f"👤 Name: {user['first_name']}"
             ),
 
             reply_markup=InlineKeyboardMarkup(
@@ -700,19 +656,19 @@ async def button(update, context):
                     [
                         InlineKeyboardButton(
                             "⬅️ Back",
-                            callback_data="back",
+                            callback_data="back"
                         )
                     ]
                 ]
             ),
 
-            parse_mode="Markdown",
+            parse_mode="Markdown"
         )
 
         return
 
     # --------------------------------------------------------
-    # REFER
+    # REFERRAL
     # --------------------------------------------------------
 
     elif query.data == "refer":
@@ -736,10 +692,10 @@ async def button(update, context):
                 f"*₦{REFERRAL_BONUS:.0f}*\n\n"
 
                 "When someone joins through your "
-                "link and activates their account, "
-                "you receive the referral reward.\n\n"
+                "link and activates, you receive "
+                f"*₦{REFERRAL_BONUS:.0f}*.\n\n"
 
-                "🔗 *Your referral link:*\n"
+                "🔗 *YOUR REFERRAL LINK:*\n"
                 f"`{link}`\n\n"
 
                 f"👥 Total referrals: "
@@ -751,13 +707,13 @@ async def button(update, context):
                     [
                         InlineKeyboardButton(
                             "⬅️ Back",
-                            callback_data="back",
+                            callback_data="back"
                         )
                     ]
                 ]
             ),
 
-            parse_mode="Markdown",
+            parse_mode="Markdown"
         )
 
         return
@@ -768,40 +724,38 @@ async def button(update, context):
 
     elif query.data == "activation":
 
-        await query.answer()
-
         if user["activated"]:
 
             await query.answer(
                 "✅ Your account is already activated.",
-                show_alert=True,
+                show_alert=True
             )
 
             return
 
         uid = str(telegram_user.id)
 
-        if (
-            uid
-            not in data["pending_activations"]
-        ):
+        if uid not in data["pending_activations"]:
 
             data["pending_activations"].append(uid)
 
         save_data(data)
 
+        await query.answer()
+
         await query.edit_message_text(
 
             text=(
-                "🔐 *ACTIVATION*\n\n"
+                "🔐 *ACCOUNT ACTIVATION*\n\n"
 
                 f"Activation fee: "
                 f"*₦{ACTIVATION_FEE:.0f}*\n\n"
 
-                "Send the activation payment "
-                "to the administrator.\n\n"
+                "Send your payment to the admin.\n"
+                "After payment, wait for approval.\n\n"
 
-                "After payment, wait for admin approval."
+                "Your activation will be completed "
+                "by the administrator."
             ),
 
             reply_markup=InlineKeyboardMarkup(
@@ -809,13 +763,13 @@ async def button(update, context):
                     [
                         InlineKeyboardButton(
                             "⬅️ Back",
-                            callback_data="back",
+                            callback_data="back"
                         )
                     ]
                 ]
             ),
 
-            parse_mode="Markdown",
+            parse_mode="Markdown"
         )
 
         await context.bot.send_message(
@@ -826,14 +780,11 @@ async def button(update, context):
                 "🔔 *NEW ACTIVATION REQUEST*\n\n"
 
                 f"User: {telegram_user.first_name}\n"
-
                 f"ID: `{telegram_user.id}`\n"
-
-                f"Amount: "
-                f"₦{ACTIVATION_FEE:.0f}"
+                f"Amount: ₦{ACTIVATION_FEE:.0f}"
             ),
 
-            parse_mode="Markdown",
+            parse_mode="Markdown"
         )
 
         return
@@ -844,14 +795,20 @@ async def button(update, context):
 
     elif query.data == "withdraw":
 
+        if not user["activated"]:
+
+            await query.answer(
+                "🔒 Activate your account first.",
+                show_alert=True
+            )
+
+            return
+
         if not is_withdraw_time():
 
             await query.answer(
-
-                "Withdrawals open on the 14th and 30th "
-                "from 6:00 AM to 7:30 AM WAT.",
-
-                show_alert=True,
+                "Withdrawals open on the 14th and 30th from 6:00-7:30 AM WAT.",
+                show_alert=True
             )
 
             return
@@ -859,11 +816,8 @@ async def button(update, context):
         if user["balance"] < MIN_WITHDRAW:
 
             await query.answer(
-
-                f"Minimum withdrawal is "
-                f"₦{MIN_WITHDRAW:.0f}.",
-
-                show_alert=True,
+                f"Minimum withdrawal is ₦{MIN_WITHDRAW:.0f}.",
+                show_alert=True
             )
 
             return
@@ -896,20 +850,19 @@ async def button(update, context):
                     [
                         InlineKeyboardButton(
                             "✅ Continue",
-                            callback_data="withdraw_confirm",
+                            callback_data="withdraw_confirm"
                         )
                     ],
-
                     [
                         InlineKeyboardButton(
                             "❌ Cancel",
-                            callback_data="back",
+                            callback_data="back"
                         )
-                    ],
+                    ]
                 ]
             ),
 
-            parse_mode="Markdown",
+            parse_mode="Markdown"
         )
 
         return
@@ -923,8 +876,8 @@ async def button(update, context):
         if not is_withdraw_time():
 
             await query.answer(
-                "Withdrawals are currently closed.",
-                show_alert=True,
+                "Withdrawal time has closed.",
+                show_alert=True
             )
 
             return
@@ -933,7 +886,7 @@ async def button(update, context):
 
             await query.answer(
                 "Insufficient balance.",
-                show_alert=True,
+                show_alert=True
             )
 
             return
@@ -961,13 +914,13 @@ async def button(update, context):
                     [
                         InlineKeyboardButton(
                             "❌ Cancel",
-                            callback_data="back",
+                            callback_data="back"
                         )
                     ]
                 ]
             ),
 
-            parse_mode="Markdown",
+            parse_mode="Markdown"
         )
 
         return
@@ -978,8 +931,7 @@ async def button(update, context):
 
     elif (
         query.data == "admin"
-        and str(telegram_user.id)
-        == str(ADMIN_ID)
+        and str(telegram_user.id) == str(ADMIN_ID)
     ):
 
         await query.answer()
@@ -987,19 +939,18 @@ async def button(update, context):
         await admin_panel(
             query,
             context,
-            data,
+            data
         )
 
         return
 
     # --------------------------------------------------------
-    # ADMIN APPROVE ACTIVATIONS
+    # ADMIN APPROVAL LIST
     # --------------------------------------------------------
 
     elif (
         query.data == "admin_approve_act"
-        and str(telegram_user.id)
-        == str(ADMIN_ID)
+        and str(telegram_user.id) == str(ADMIN_ID)
     ):
 
         await query.answer()
@@ -1007,7 +958,7 @@ async def button(update, context):
         await admin_approve_activations(
             query,
             context,
-            data,
+            data
         )
 
         return
@@ -1018,13 +969,12 @@ async def button(update, context):
 
     elif (
         query.data.startswith("approve_")
-        and str(telegram_user.id)
-        == str(ADMIN_ID)
+        and str(telegram_user.id) == str(ADMIN_ID)
     ):
 
         user_id = query.data.split(
             "_",
-            1,
+            1
         )[1]
 
         await query.answer()
@@ -1033,7 +983,7 @@ async def button(update, context):
             query,
             context,
             data,
-            user_id,
+            user_id
         )
 
         return
@@ -1044,8 +994,7 @@ async def button(update, context):
 
     elif (
         query.data == "admin_withdraws"
-        and str(telegram_user.id)
-        == str(ADMIN_ID)
+        and str(telegram_user.id) == str(ADMIN_ID)
     ):
 
         await query.answer()
@@ -1053,7 +1002,7 @@ async def button(update, context):
         await admin_view_withdrawals(
             query,
             context,
-            data,
+            data
         )
 
         return
@@ -1064,8 +1013,7 @@ async def button(update, context):
 
     elif (
         query.data.startswith("paid_")
-        and str(telegram_user.id)
-        == str(ADMIN_ID)
+        and str(telegram_user.id) == str(ADMIN_ID)
     ):
 
         index = int(
@@ -1078,7 +1026,7 @@ async def button(update, context):
             query,
             context,
             data,
-            index,
+            index
         )
 
         return
@@ -1094,7 +1042,7 @@ async def button(update, context):
         await show_main_menu(
             query,
             context,
-            user,
+            user
         )
 
         return
@@ -1110,7 +1058,7 @@ async def admin_panel(query, context, data):
         data["pending_activations"]
     )
 
-    pending_withdrawals = len(
+    withdrawals = len(
         [
             w
             for w in data["withdrawals"]
@@ -1121,16 +1069,15 @@ async def admin_panel(query, context, data):
     await query.edit_message_text(
 
         text=(
-            "👑 *ADMIN PANEL*\n\n"
+            "👑 *TAPBUMBER ADMIN PANEL*\n\n"
 
-            f"👥 Users: "
-            f"*{len(data['users'])}*\n"
+            f"👥 Users: *{len(data['users'])}*\n"
 
             f"🔐 Pending activations: "
             f"*{pending}*\n"
 
             f"💸 Pending withdrawals: "
-            f"*{pending_withdrawals}*"
+            f"*{withdrawals}*"
         ),
 
         reply_markup=InlineKeyboardMarkup(
@@ -1138,38 +1085,36 @@ async def admin_panel(query, context, data):
                 [
                     InlineKeyboardButton(
                         "🔐 Approve Activations",
-                        callback_data="admin_approve_act",
+                        callback_data="admin_approve_act"
                     )
                 ],
-
                 [
                     InlineKeyboardButton(
                         "💸 View Withdrawals",
-                        callback_data="admin_withdraws",
+                        callback_data="admin_withdraws"
                     )
                 ],
-
                 [
                     InlineKeyboardButton(
                         "⬅️ Back",
-                        callback_data="back",
+                        callback_data="back"
                     )
-                ],
+                ]
             ]
         ),
 
-        parse_mode="Markdown",
+        parse_mode="Markdown"
     )
 
 
 # ============================================================
-# ADMIN ACTIVATIONS
+# ADMIN ACTIVATION LIST
 # ============================================================
 
 async def admin_approve_activations(
     query,
     context,
-    data,
+    data
 ):
 
     pending = data["pending_activations"]
@@ -1185,11 +1130,11 @@ async def admin_approve_activations(
                     [
                         InlineKeyboardButton(
                             "⬅️ Back",
-                            callback_data="admin",
+                            callback_data="admin"
                         )
                     ]
                 ]
-            ),
+            )
         )
 
         return
@@ -1200,17 +1145,17 @@ async def admin_approve_activations(
 
         name = data["users"].get(
             uid,
-            {},
+            {}
         ).get(
             "first_name",
-            "User",
+            "User"
         )
 
         keyboard.append(
             [
                 InlineKeyboardButton(
                     f"Approve {name} ({uid})",
-                    callback_data=f"approve_{uid}",
+                    callback_data=f"approve_{uid}"
                 )
             ]
         )
@@ -1219,7 +1164,7 @@ async def admin_approve_activations(
         [
             InlineKeyboardButton(
                 "⬅️ Back",
-                callback_data="admin",
+                callback_data="admin"
             )
         ]
     )
@@ -1232,7 +1177,7 @@ async def admin_approve_activations(
             keyboard
         ),
 
-        parse_mode="Markdown",
+        parse_mode="Markdown"
     )
 
 
@@ -1244,14 +1189,14 @@ async def approve_user(
     query,
     context,
     data,
-    user_id,
+    user_id
 ):
 
     if user_id not in data["users"]:
 
         await query.answer(
             "User not found.",
-            show_alert=True,
+            show_alert=True
         )
 
         return
@@ -1262,7 +1207,7 @@ async def approve_user(
 
         await query.answer(
             "Already activated.",
-            show_alert=True,
+            show_alert=True
         )
 
         return
@@ -1279,21 +1224,20 @@ async def approve_user(
         daily_cycle_start(now).isoformat()
     )
 
-    user["current_cycle_claimed"] = False
+    user["daily_cycles_claimed"] = 0
+    user["daily_earned"] = 0.0
 
+    user["current_cycle_claimed"] = False
     user["last_claim_time"] = None
 
     referral_message = ""
 
-    # --------------------------------------------------------
-    # REFERRAL BONUS
-    # --------------------------------------------------------
-
+    # Referral bonus
     if (
         user.get("referrer")
         and not user.get(
             "referral_bonus_paid",
-            False,
+            False
         )
     ):
 
@@ -1336,20 +1280,17 @@ async def approve_user(
 
                     text=(
                         "🎉 *REFERRAL BONUS*\n\n"
-
                         "Your referral activated.\n"
-
                         f"₦{REFERRAL_BONUS:.0f} "
                         "has been credited."
                     ),
 
-                    parse_mode="Markdown",
+                    parse_mode="Markdown"
                 )
 
             except Exception:
                 pass
 
-    # Remove from pending list
     if user_id in data["pending_activations"]:
 
         data["pending_activations"].remove(
@@ -1358,7 +1299,6 @@ async def approve_user(
 
     save_data(data)
 
-    # Notify user
     try:
 
         await context.bot.send_message(
@@ -1368,13 +1308,15 @@ async def approve_user(
             text=(
                 "🎉 *ACTIVATION SUCCESSFUL!*\n\n"
 
-                f"₦{REWARD_PER_CYCLE:.0f} "
-                "every 2 hours.\n\n"
+                f"Reward: ₦{REWARD_PER_CYCLE:.0f} "
+                "every 2 hours.\n"
+
+                "12 cycles per daily period.\n"
 
                 "Daily reset: 5:00 PM WAT."
             ),
 
-            parse_mode="Markdown",
+            parse_mode="Markdown"
         )
 
     except Exception:
@@ -1397,13 +1339,13 @@ async def approve_user(
                 [
                     InlineKeyboardButton(
                         "⬅️ Back",
-                        callback_data="admin_approve_act",
+                        callback_data="admin_approve_act"
                     )
                 ]
             ]
         ),
 
-        parse_mode="Markdown",
+        parse_mode="Markdown"
     )
 
 
@@ -1414,13 +1356,16 @@ async def approve_user(
 async def admin_view_withdrawals(
     query,
     context,
-    data,
+    data
 ):
 
     pending = [
+
         (index, withdrawal)
+
         for index, withdrawal
         in enumerate(data["withdrawals"])
+
         if withdrawal.get("status")
         == "pending"
     ]
@@ -1436,11 +1381,11 @@ async def admin_view_withdrawals(
                     [
                         InlineKeyboardButton(
                             "⬅️ Back",
-                            callback_data="admin",
+                            callback_data="admin"
                         )
                     ]
                 ]
-            ),
+            )
         )
 
         return
@@ -1457,10 +1402,10 @@ async def admin_view_withdrawals(
 
         name = data["users"].get(
             uid,
-            {},
+            {}
         ).get(
             "first_name",
-            "User",
+            "User"
         )
 
         text += (
@@ -1469,14 +1414,14 @@ async def admin_view_withdrawals(
             f"Gross: ₦{withdrawal['amount']:.2f}\n"
             f"Fee: ₦{withdrawal['fee']:.2f}\n"
             f"Net: ₦{withdrawal['net']:.2f}\n"
-            f"Bank: {withdrawal['bank']}\n\n"
+            f"Bank:\n{withdrawal['bank']}\n\n"
         )
 
         keyboard.append(
             [
                 InlineKeyboardButton(
                     f"✅ Mark Paid - {name}",
-                    callback_data=f"paid_{index}",
+                    callback_data=f"paid_{index}"
                 )
             ]
         )
@@ -1485,7 +1430,7 @@ async def admin_view_withdrawals(
         [
             InlineKeyboardButton(
                 "⬅️ Back",
-                callback_data="admin",
+                callback_data="admin"
             )
         ]
     )
@@ -1498,7 +1443,7 @@ async def admin_view_withdrawals(
             keyboard
         ),
 
-        parse_mode="Markdown",
+        parse_mode="Markdown"
     )
 
 
@@ -1510,7 +1455,7 @@ async def mark_withdrawal_paid(
     query,
     context,
     data,
-    index,
+    index
 ):
 
     if (
@@ -1520,7 +1465,7 @@ async def mark_withdrawal_paid(
 
         await query.answer(
             "Withdrawal not found.",
-            show_alert=True,
+            show_alert=True
         )
 
         return
@@ -1533,7 +1478,7 @@ async def mark_withdrawal_paid(
 
         await query.answer(
             "Already processed.",
-            show_alert=True,
+            show_alert=True
         )
 
         return
@@ -1575,7 +1520,7 @@ async def mark_withdrawal_paid(
                 f"₦{withdrawal['net']:.2f}"
             ),
 
-            parse_mode="Markdown",
+            parse_mode="Markdown"
         )
 
     except Exception:
@@ -1590,27 +1535,26 @@ async def mark_withdrawal_paid(
                 [
                     InlineKeyboardButton(
                         "⬅️ Back",
-                        callback_data="admin_withdraws",
+                        callback_data="admin_withdraws"
                     )
                 ]
             ]
-        ),
+        )
     )
 
 
 # ============================================================
-# TEXT MESSAGES
+# TEXT MESSAGE HANDLER
 # ============================================================
 
 async def handle_message(
     update,
-    context,
+    context
 ):
 
     if not context.user_data.get(
         "awaiting_withdraw"
     ):
-
         return
 
     data = load_data()
@@ -1620,10 +1564,9 @@ async def handle_message(
     user = get_user(
         data,
         telegram_user.id,
-        telegram_user.first_name,
+        telegram_user.first_name
     )
 
-    # Check withdrawal conditions again
     if not is_withdraw_time():
 
         context.user_data[
@@ -1631,7 +1574,7 @@ async def handle_message(
         ] = False
 
         await update.message.reply_text(
-            "❌ Withdrawals are currently closed."
+            "❌ Withdrawal time has closed."
         )
 
         return
@@ -1643,24 +1586,24 @@ async def handle_message(
         ] = False
 
         await update.message.reply_text(
-            "❌ Insufficient balance."
+            "❌ Your balance is below the minimum withdrawal."
         )
 
         return
 
-    bank_details = update.message.text.strip()
+    bank = update.message.text.strip()
 
-    if not bank_details:
+    if not bank:
 
         await update.message.reply_text(
-            "❌ Please enter your bank details."
+            "❌ Please send your bank details."
         )
 
         return
 
     amount = round(
         user["balance"],
-        2,
+        2
     )
 
     fee, net = calculate_withdrawal(
@@ -1668,21 +1611,30 @@ async def handle_message(
     )
 
     withdrawal = {
+
         "user_id": telegram_user.id,
+
         "amount": amount,
+
         "fee": fee,
+
         "net": net,
-        "bank": bank_details,
+
+        "bank": bank,
+
         "status": "pending",
-        "requested_at": now_local().isoformat(),
+
+        "requested_at":
+            now_local().isoformat()
     }
 
     data["withdrawals"].append(
         withdrawal
     )
 
-    # Remove balance immediately
     user["balance"] = 0.0
+
+    user["bank_info"] = bank
 
     save_data(data)
 
@@ -1699,16 +1651,15 @@ async def handle_message(
 
             f"Fee: ₦{fee:.2f}\n"
 
-            f"You get: ₦{net:.2f}\n\n"
+            f"You receive: ₦{net:.2f}\n\n"
 
-            "Your withdrawal is now waiting "
-            "for admin processing."
+            "Your withdrawal is now pending "
+            "admin approval."
         ),
 
-        parse_mode="Markdown",
+        parse_mode="Markdown"
     )
 
-    # Notify admin
     try:
 
         await context.bot.send_message(
@@ -1718,21 +1669,16 @@ async def handle_message(
             text=(
                 "💸 *NEW WITHDRAWAL*\n\n"
 
-                f"User: {user['first_name']}\n"
+                f"User: {telegram_user.first_name}\n"
 
                 f"ID: `{telegram_user.id}`\n"
 
-                f"Amount: ₦{amount:.2f}\n"
+                f"Amount: ₦{amount:.2f}\n\n"
 
-                f"Fee: ₦{fee:.2f}\n"
-
-                f"Net: ₦{net:.2f}\n\n"
-
-                f"*Bank Details:*\n"
-                f"{bank_details}"
+                f"Bank details:\n{bank}"
             ),
 
-            parse_mode="Markdown",
+            parse_mode="Markdown"
         )
 
     except Exception:
@@ -1745,10 +1691,9 @@ async def handle_message(
 
 async def admin(update, context):
 
-    if (
-        str(update.effective_user.id)
-        != str(ADMIN_ID)
-    ):
+    if str(
+        update.effective_user.id
+    ) != str(ADMIN_ID):
 
         return
 
@@ -1761,13 +1706,13 @@ async def admin(update, context):
                 [
                     InlineKeyboardButton(
                         "👑 Open Admin Panel",
-                        callback_data="admin",
+                        callback_data="admin"
                     )
                 ]
             ]
         ),
 
-        parse_mode="Markdown",
+        parse_mode="Markdown"
     )
 
 
@@ -1783,36 +1728,36 @@ def main():
             "TELEGRAM_TOKEN environment variable is missing."
         )
 
-    application = (
+    app = (
         ApplicationBuilder()
         .token(TOKEN)
         .build()
     )
 
-    application.add_handler(
+    app.add_handler(
         CommandHandler(
             "start",
-            start,
+            start
         )
     )
 
-    application.add_handler(
+    app.add_handler(
         CommandHandler(
             "admin",
-            admin,
+            admin
         )
     )
 
-    application.add_handler(
+    app.add_handler(
         CallbackQueryHandler(
             button
         )
     )
 
-    application.add_handler(
+    app.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
-            handle_message,
+            handle_message
         )
     )
 
@@ -1820,7 +1765,7 @@ def main():
         "TapBumber NEW SYSTEM is running..."
     )
 
-    application.run_polling()
+    app.run_polling()
 
 
 # ============================================================

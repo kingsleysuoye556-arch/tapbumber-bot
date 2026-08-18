@@ -251,10 +251,11 @@ def claim_available(user):
     # Already claimed all completed cycles.
 
     if completed <= user.get(
-    "last_claimed_cycle",
-    0
-):
-    return None
+        "last_claimed_cycle",
+        0
+    ):
+        return None
+
     end = cycle_end_time(completed)
 
     # Cycle has not finished.

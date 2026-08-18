@@ -1261,9 +1261,8 @@ async def approve_user(
 
     user["current_cycle_claimed"] = False
     user["last_claim_time"] = None
-
+    user["last_claimed_cycle"] = 0
     referral_message = ""
-
     # Referral bonus
     if (
         user.get("referrer")

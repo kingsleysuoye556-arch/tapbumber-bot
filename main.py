@@ -601,7 +601,7 @@ async def button(update, context):
         user["daily_earned"] += REWARD_PER_CYCLE
 
         user["daily_cycles_claimed"] += 1
-
+        user["last_claimed_cycle"] = cycle
         user["last_claim_time"] = (
             now_local().isoformat()
         )

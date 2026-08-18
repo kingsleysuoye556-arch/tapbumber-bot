@@ -168,7 +168,8 @@ def initialize_daily_cycle(user):
         )
 
         user["current_cycle_claimed"] = False
-        user["last_claim_time"] = None
+user["last_claim_time"] = None
+user["last_claimed_cycle"] = 0
 
 
 def get_cycle_number(user):

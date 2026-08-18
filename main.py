@@ -159,7 +159,11 @@ def initialize_daily_cycle(user):
 
     if user.get("daily_cycle_date") != key:
         user["daily_cycle_date"] = key
-        user["daily_cycles_claimed"] = 0
+if completed <= user.get(
+    "last_claimed_cycle",
+    0
+):
+    return None        
         user["daily_earned"] = 0.0
 
         # The daily period starts at 5:00 PM WAT.

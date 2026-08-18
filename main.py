@@ -250,7 +250,7 @@ def claim_available(user):
 
     # Already claimed all completed cycles.
 
-   if completed <= user.get(
+    if completed <= user.get(
     "last_claimed_cycle",
     0
 ):

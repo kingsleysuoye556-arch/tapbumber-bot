@@ -1,3 +1,5 @@
+import "./globals.css";
+
 export const metadata = {
   title: "TapBomba AI",
   description: "Automate. Grow. Earn with TapBomba AI.",

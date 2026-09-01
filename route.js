@@ -1,12 +1,8 @@
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+export const runtime = "nodejs";
 
 export async function POST(request) {
   try {
-    const { message, tool } = await request.json();
+    const { message } = await request.json();
 
     if (!message || typeof message !== "string") {
       return Response.json(
@@ -15,43 +11,60 @@ export async function POST(request) {
       );
     }
 
-    const tools = {
-      content: "AI Content Creator",
-      business: "Business Assistant",
-      social: "Social Media Assistant",
-      marketing: "Marketing Assistant",
-      ideas: "AI Idea Generator",
-      automation: "Automation Hub",
-    };
+    if (!process.env.OPENAI_API_KEY) {
+      return Response.json(
+        { error: "AI service is not configured yet." },
+        { status: 500 }
+      );
+    }
 
-    const selectedTool = tools[tool] || "TapBumber AI Assistant";
+    const response = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are TapBomba AI, a helpful, friendly, and professional AI assistant. Give clear and useful answers.",
+            },
+            {
+              role: "user",
+              content: message,
+            },
+          ],
+        }),
+      }
+    );
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
+    const data = await response.json();
+
+    if (!response.ok) {
+      return Response.json(
         {
-          role: "system",
-          content: `You are TapBumber AI, a helpful and professional AI assistant.
-The user selected: ${selectedTool}.
-Give practical, clear, useful answers.
-Do not claim to have performed actions you cannot actually perform.`,
+          error: data?.error?.message || "OpenAI request failed.",
         },
-        {
-          role: "user",
-          content: message,
-        },
-      ],
-    });
+        { status: response.status }
+      );
+    }
 
     return Response.json({
       success: true,
-      response: completion.choices[0]?.message?.content || "No response generated.",
+      response:
+        data?.choices?.[0]?.message?.content ||
+        "No response generated.",
     });
   } catch (error) {
-    console.error("TapBumber AI error:", error);
+    console.error("TapBomba AI error:", error);
 
     return Response.json(
-      { error: "Something went wrong while contacting TapBumber AI." },
+      { error: "Something went wrong while contacting TapBomba AI." },
       { status: 500 }
     );
   }

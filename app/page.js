@@ -1,153 +1,88 @@
-"use client";
+export const runtime = "nodejs";
 
-import { useState } from "react";
+export async function POST(request) {
+  try {
+    const { message } = await request.json();
 
-export default function Home() {
-  const [message, setMessage] = useState("");
-  const [response, setResponse] = useState("");
-  const [loading, setLoading] = useState(false);
+    if (!message || typeof message !== "string") {
+      return Response.json(
+        { error: "Please provide a message." },
+        { status: 400 }
+      );
+    }
 
-  async function askAI(e) {
-    e.preventDefault();
+    const apiKey = process.env.OPENAI_API_KEY;
 
-    if (!message.trim()) return;
+    if (!apiKey) {
+      return Response.json(
+        { error: "OpenAI API key is not configured." },
+        { status: 500 }
+      );
+    }
 
-    setLoading(true);
-    setResponse("");
-
-    try {
-      const res = await fetch("/api/chat", {
+    const openAIResponse = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({ message: message.trim() }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Something went wrong.");
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are TapBomba AI, a helpful, friendly, and professional AI business assistant. Give clear, practical, useful answers. Do not claim to have performed actions you cannot actually perform.",
+            },
+            {
+              role: "user",
+              content: message.trim(),
+            },
+          ],
+        }),
       }
+    );
 
-      setResponse(data.response);
-    } catch (error) {
-      setResponse(error.message || "Unable to connect to TapBomba AI.");
-    } finally {
-      setLoading(false);
+    const data = await openAIResponse.json();
+
+    if (!openAIResponse.ok) {
+      console.error("OpenAI error:", data);
+
+      return Response.json(
+        {
+          error:
+            data?.error?.message ||
+            "OpenAI could not process the request.",
+        },
+        { status: openAIResponse.status }
+      );
     }
+
+    const answer =
+      data?.choices?.[0]?.message?.content;
+
+    if (!answer) {
+      return Response.json(
+        { error: "No AI response was generated." },
+        { status: 500 }
+      );
+    }
+
+    return Response.json({
+      success: true,
+      response: answer,
+    });
+  } catch (error) {
+    console.error("TapBomba AI error:", error);
+
+    return Response.json(
+      {
+        error:
+          "Something went wrong while contacting TapBomba AI.",
+      },
+      { status: 500 }
+    );
   }
-
-  return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#080812",
-        color: "white",
-        fontFamily: "Arial, Helvetica, sans-serif",
-        padding: "30px 20px",
-      }}
-    >
-      <div style={{ maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
-        <div
-          style={{
-            display: "inline-block",
-            padding: "9px 15px",
-            borderRadius: "50px",
-            background: "rgba(108,76,255,0.15)",
-            border: "1px solid rgba(139,108,255,0.35)",
-            color: "#b9aaff",
-            marginBottom: "25px",
-          }}
-        >
-          ✨ AI-Powered Business Platform
-        </div>
-
-        <h1
-          style={{
-            fontSize: "clamp(44px, 9vw, 82px)",
-            lineHeight: "0.98",
-            marginBottom: "25px",
-          }}
-        >
-          Automate.
-          <br />
-          <span style={{ color: "#9b7cff" }}>Grow. Earn.</span>
-        </h1>
-
-        <p
-          style={{
-            color: "#b7b7c8",
-            fontSize: "18px",
-            lineHeight: "1.7",
-          }}
-        >
-          TapBomba AI helps you create, automate and grow your digital
-          business with powerful artificial intelligence tools.
-        </p>
-
-        <form
-          onSubmit={askAI}
-          style={{
-            marginTop: "40px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
-          }}
-        >
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Ask TapBomba AI anything..."
-            rows={5}
-            style={{
-              width: "100%",
-              padding: "16px",
-              borderRadius: "14px",
-              border: "1px solid rgba(255,255,255,0.15)",
-              background: "#11111d",
-              color: "white",
-              fontSize: "16px",
-              resize: "vertical",
-            }}
-          />
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: "16px 25px",
-              border: "none",
-              borderRadius: "12px",
-              background: "#7657ff",
-              color: "white",
-              fontSize: "16px",
-              fontWeight: "700",
-            }}
-          >
-            {loading ? "🤖 TapBomba AI is thinking..." : "✨ Ask TapBomba AI"}
-          </button>
-        </form>
-
-        {response && (
-          <div
-            style={{
-              marginTop: "25px",
-              padding: "22px",
-              borderRadius: "16px",
-              background: "#11111d",
-              textAlign: "left",
-              lineHeight: "1.7",
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            <strong>🤖 TapBomba AI</strong>
-            <p style={{ marginTop: "10px", color: "#d0d0df" }}>
-              {response}
-            </p>
-          </div>
-        )}
-      </div>
-    </main>
-  );
 }

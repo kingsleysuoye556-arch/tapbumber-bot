@@ -1,6 +1,6 @@
 export const metadata = {
-  title: "TapBumber AI",
-  description: "Automate. Grow. Earn with TapBumber AI.",
+  title: "TapBomba AI",
+  description: "Automate. Grow. Earn with TapBomba AI.",
 };
 
 export default function RootLayout({ children }) {

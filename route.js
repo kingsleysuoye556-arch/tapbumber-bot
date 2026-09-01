@@ -1,4 +1,3 @@
-app/
-└── api/
-    └── chat/
-        └── route.js
+tapbumber-ai
+└── app
+    └── page.js

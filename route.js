@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -9,8 +8,8 @@ export async function POST(req) {
   try {
     const { message } = await req.json();
 
-    if (!message || typeof message !== "string") {
-      return NextResponse.json(
+    if (!message) {
+      return Response.json(
         { error: "Message is required" },
         { status: 400 }
       );
@@ -20,20 +19,27 @@ export async function POST(req) {
       model: "gpt-4o-mini",
       messages: [
         {
+          role: "system",
+          content:
+            "You are TapBomba AI, a friendly and practical business assistant for Nigerian entrepreneurs. Use ₦ for Naira where appropriate and give practical business advice.",
+        },
+        {
           role: "user",
           content: message,
         },
       ],
     });
 
-    return NextResponse.json({
+    return Response.json({
       reply: completion.choices[0].message.content,
     });
   } catch (error) {
-    console.error("OpenAI API error:", error);
+    console.error(error);
 
-    return NextResponse.json(
-      { error: "Failed to get AI response" },
+    return Response.json(
+      {
+        error: error.message || "Something went wrong",
+      },
       { status: 500 }
     );
   }

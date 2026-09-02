@@ -53,7 +53,6 @@ export default function HorticultureDesigner() {
           margin: "0 auto",
         }}
       >
-        {/* HEADER */}
         <div
           style={{
             textAlign: "center",
@@ -94,7 +93,6 @@ export default function HorticultureDesigner() {
           </p>
         </div>
 
-        {/* DESIGN BOX */}
         <div
           style={{
             background: "#0D0D0D",
@@ -165,7 +163,6 @@ export default function HorticultureDesigner() {
           </button>
         </div>
 
-        {/* RESULT */}
         {result && (
           <div
             style={{

@@ -30,7 +30,9 @@ export default function HorticultureDesigner() {
 
       setResult(data.result || "No design result was received.");
     } catch (error) {
-      setResult(error?.message || "Unable to create design.");
+      setResult(
+        error instanceof Error ? error.message : "Unable to create design."
+      );
     } finally {
       setLoading(false);
     }
@@ -75,8 +77,7 @@ export default function HorticultureDesigner() {
               fontWeight: 800,
             }}
           >
-            <span style={{ color: "#FFD43B" }}>Horticulture</span>{" "}
-            Designer
+            <span style={{ color: "#FFD43B" }}>Horticulture</span> Designer
           </h1>
 
           <p
@@ -87,8 +88,8 @@ export default function HorticultureDesigner() {
               lineHeight: 1.6,
             }}
           >
-            Design beautiful flower and plant landscapes for houses,
-            buildings, gardens, and outdoor spaces.
+            Design beautiful flower and plant landscapes for houses, buildings,
+            gardens, and outdoor spaces.
           </p>
         </header>
 
@@ -143,19 +144,14 @@ export default function HorticultureDesigner() {
               padding: "14px 18px",
               borderRadius: 14,
               border: "1px solid rgba(255,212,59,0.25)",
-              background:
-                loading || !request.trim() ? "#171717" : "#FFD43B",
-              color:
-                loading || !request.trim() ? "#777" : "#050505",
+              background: loading || !request.trim() ? "#171717" : "#FFD43B",
+              color: loading || !request.trim() ? "#777" : "#050505",
               fontWeight: 800,
               fontSize: 15,
-              cursor:
-                loading || !request.trim() ? "not-allowed" : "pointer",
+              cursor: loading || !request.trim() ? "not-allowed" : "pointer",
             }}
           >
-            {loading
-              ? "Creating Design..."
-              : "Create Horticulture Design 🌿"}
+            {loading ? "Creating Design..." : "Create Horticulture Design 🌿"}
           </button>
         </section>
 
@@ -176,10 +172,7 @@ export default function HorticultureDesigner() {
                 fontWeight: 800,
               }}
             >
-              Your{" "}
-              <span style={{ color: "#FFD43B" }}>
-                Horticulture Plan
-              </span>{" "}
+              Your <span style={{ color: "#FFD43B" }}>Horticulture Plan</span>{" "}
               🌱
             </h2>
 

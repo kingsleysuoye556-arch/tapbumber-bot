@@ -26,9 +26,13 @@ export default function Home() {
   async function handleSubmit(e) {
     e.preventDefault();
     const trimmed = message.trim();
+
     if (!trimmed || loading) return;
 
-    const userMessage = { role: "user", content: trimmed };
+    const userMessage = {
+      role: "user",
+      content: trimmed,
+    };
 
     setMessages((prev) => [...prev, userMessage]);
     setMessage("");
@@ -102,21 +106,20 @@ export default function Home() {
     <div
       style={{
         minHeight: "100vh",
-        background:
-          "linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
-        color: "#e2e8f0",
+        background: "#050505",
+        color: "#ffffff",
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
         display: "flex",
         flexDirection: "column",
       }}
     >
-      {/* Header */}
+      {/* HEADER */}
       <header
         style={{
-          padding: "16px 24px",
-          borderBottom: "1px solid rgba(148, 163, 184, 0.15)",
-          background: "rgba(15, 23, 42, 0.8)",
+          padding: "16px 20px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(5,5,5,0.96)",
           backdropFilter: "blur(12px)",
           position: "sticky",
           top: 0,
@@ -132,22 +135,24 @@ export default function Home() {
             gap: 12,
           }}
         >
+          {/* TB LOGO */}
           <div
             style={{
-              width: 40,
-              height: 40,
+              width: 42,
+              height: 42,
               borderRadius: 12,
-              background:
-                "linear-gradient(135deg, #22c55e, #16a34a)",
+              background: "#111111",
+              border: "1px solid rgba(255,255,255,0.12)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontWeight: 700,
-              fontSize: 18,
-              color: "white",
+              fontWeight: 800,
+              fontSize: 17,
+              color: "#ffffff",
+              boxShadow: "0 0 18px rgba(255,193,7,0.08)",
             }}
           >
-            T
+            TB
           </div>
 
           <div>
@@ -155,26 +160,29 @@ export default function Home() {
               style={{
                 margin: 0,
                 fontSize: 18,
-                fontWeight: 600,
+                fontWeight: 700,
+                color: "#ffffff",
+                letterSpacing: "-0.3px",
               }}
             >
-              TapBomba AI
+              TapBomba <span style={{ color: "#FFD43B" }}>AI</span>
             </h1>
 
             <p
               style={{
-                margin: 0,
+                margin: "2px 0 0",
                 fontSize: 13,
-                color: "#94a3b8",
+                color: "#ffffff",
               }}
             >
-              Automate. Grow. Earn.
+              <span style={{ color: "#FFD43B" }}>Automate.</span>{" "}
+              Grow. <span style={{ color: "#FF4D4D" }}>Earn.</span>
             </p>
           </div>
         </div>
       </header>
 
-      {/* Messages and Content Creator */}
+      {/* MAIN CONTENT */}
       <main
         style={{
           flex: 1,
@@ -188,14 +196,14 @@ export default function Home() {
           gap: 16,
         }}
       >
-        {/* AI Content Creator Feature */}
+        {/* AI CONTENT CREATOR */}
         <div
           style={{
             padding: "18px",
             borderRadius: 18,
-            background: "rgba(30, 41, 59, 0.85)",
-            border: "1px solid rgba(34, 197, 94, 0.25)",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
+            background: "#0D0D0D",
+            border: "1px solid rgba(255,255,255,0.09)",
+            boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
           }}
         >
           <div
@@ -208,18 +216,18 @@ export default function Home() {
           >
             <div
               style={{
-                width: 38,
-                height: 38,
+                width: 40,
+                height: 40,
                 borderRadius: 12,
-                background:
-                  "linear-gradient(135deg, #22c55e, #16a34a)",
+                background: "#151515",
+                border: "1px solid rgba(255,212,59,0.22)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 18,
               }}
             >
-              📝
+              ✨
             </div>
 
             <div>
@@ -228,16 +236,19 @@ export default function Home() {
                   margin: 0,
                   fontSize: 18,
                   color: "#ffffff",
+                  fontWeight: 700,
                 }}
               >
-                AI Content Creator
+                AI <span style={{ color: "#FFD43B" }}>Content</span>{" "}
+                Creator
               </h2>
 
               <p
                 style={{
-                  margin: "2px 0 0",
-                  color: "#94a3b8",
+                  margin: "3px 0 0",
+                  color: "#ffffff",
                   fontSize: 12,
+                  opacity: 0.7,
                 }}
               >
                 Create content for your business
@@ -248,9 +259,10 @@ export default function Home() {
           <p
             style={{
               margin: "12px 0",
-              color: "#cbd5e1",
+              color: "#ffffff",
+              opacity: 0.82,
               fontSize: 14,
-              lineHeight: 1.55,
+              lineHeight: 1.6,
             }}
           >
             Create social media posts, captions, advertisements, product
@@ -266,21 +278,22 @@ export default function Home() {
               width: "100%",
               padding: "13px 18px",
               borderRadius: 12,
-              border: "none",
-              background: loading
-                ? "rgba(34, 197, 94, 0.4)"
-                : "linear-gradient(135deg, #22c55e, #16a34a)",
-              color: "white",
-              fontWeight: 600,
+              border: "1px solid rgba(255,212,59,0.25)",
+              background: loading ? "#171717" : "#111111",
+              color: loading ? "#888888" : "#FFD43B",
+              fontWeight: 700,
               fontSize: 15,
               cursor: loading ? "not-allowed" : "pointer",
+              boxShadow: loading
+                ? "none"
+                : "0 4px 18px rgba(255,212,59,0.08)",
             }}
           >
             {loading ? "Please wait..." : "Create Content ✨"}
           </button>
         </div>
 
-        {/* Chat Messages */}
+        {/* CHAT MESSAGES */}
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -296,21 +309,18 @@ export default function Home() {
                 padding: "12px 16px",
                 borderRadius: 16,
                 background:
-                  msg.role === "user"
-                    ? "linear-gradient(135deg, #22c55e, #16a34a)"
-                    : "rgba(30, 41, 59, 0.9)",
-                color:
-                  msg.role === "user" ? "white" : "#e2e8f0",
+                  msg.role === "user" ? "#151515" : "#0D0D0D",
+                color: "#ffffff",
                 border:
-                  msg.role === "assistant"
-                    ? "1px solid rgba(148, 163, 184, 0.2)"
-                    : "none",
+                  msg.role === "user"
+                    ? "1px solid rgba(255,212,59,0.18)"
+                    : "1px solid rgba(255,255,255,0.09)",
                 boxShadow:
                   msg.role === "user"
-                    ? "0 4px 12px rgba(34, 197, 94, 0.25)"
-                    : "0 2px 8px rgba(0,0,0,0.2)",
+                    ? "0 4px 16px rgba(0,0,0,0.3)"
+                    : "0 3px 12px rgba(0,0,0,0.25)",
                 whiteSpace: "pre-wrap",
-                lineHeight: 1.55,
+                lineHeight: 1.6,
                 fontSize: 15,
               }}
             >
@@ -319,6 +329,7 @@ export default function Home() {
           </div>
         ))}
 
+        {/* THINKING */}
         {loading && (
           <div
             style={{
@@ -330,10 +341,9 @@ export default function Home() {
               style={{
                 padding: "12px 16px",
                 borderRadius: 16,
-                background: "rgba(30, 41, 59, 0.9)",
-                border:
-                  "1px solid rgba(148, 163, 184, 0.2)",
-                color: "#94a3b8",
+                background: "#0D0D0D",
+                border: "1px solid rgba(255,255,255,0.09)",
+                color: "#FFD43B",
                 fontSize: 14,
               }}
             >
@@ -345,13 +355,12 @@ export default function Home() {
         <div ref={messagesEndRef} />
       </main>
 
-      {/* Input */}
+      {/* INPUT AREA */}
       <div
         style={{
           padding: "16px",
-          borderTop:
-            "1px solid rgba(148, 163, 184, 0.15)",
-          background: "rgba(15, 23, 42, 0.9)",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(5,5,5,0.97)",
           backdropFilter: "blur(12px)",
         }}
       >
@@ -361,7 +370,7 @@ export default function Home() {
             maxWidth: 800,
             margin: "0 auto",
             display: "flex",
-            gap: 12,
+            gap: 10,
             alignItems: "flex-end",
           }}
         >
@@ -378,15 +387,15 @@ export default function Home() {
               resize: "none",
               padding: "14px 16px",
               borderRadius: 14,
-              border:
-                "1px solid rgba(148, 163, 184, 0.25)",
-              background: "rgba(30, 41, 59, 0.8)",
-              color: "#e2e8f0",
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "#101010",
+              color: "#ffffff",
               fontSize: 15,
               lineHeight: 1.4,
               outline: "none",
               minHeight: 48,
               maxHeight: 120,
+              caretColor: "#FFD43B",
             }}
           />
 
@@ -394,21 +403,20 @@ export default function Home() {
             type="submit"
             disabled={loading || !message.trim()}
             style={{
-              padding: "14px 22px",
+              padding: "14px 20px",
               borderRadius: 14,
-              border: "none",
+              border: "1px solid rgba(255,212,59,0.22)",
               background:
-                loading || !message.trim()
-                  ? "rgba(34, 197, 94, 0.4)"
-                  : "linear-gradient(135deg, #22c55e, #16a34a)",
-              color: "white",
-              fontWeight: 600,
+                loading || !message.trim() ? "#171717" : "#FFD43B",
+              color:
+                loading || !message.trim() ? "#777777" : "#050505",
+              fontWeight: 800,
               fontSize: 15,
               cursor:
                 loading || !message.trim()
                   ? "not-allowed"
                   : "pointer",
-              transition: "opacity 0.2s",
+              transition: "all 0.2s",
               whiteSpace: "nowrap",
             }}
           >
@@ -421,7 +429,8 @@ export default function Home() {
             textAlign: "center",
             margin: "10px 0 0",
             fontSize: 12,
-            color: "#64748b",
+            color: "#ffffff",
+            opacity: 0.4,
           }}
         >
           Press Enter to send • Shift + Enter for new line

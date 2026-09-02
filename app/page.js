@@ -114,7 +114,6 @@ export default function Home() {
         flexDirection: "column",
       }}
     >
-      {/* HEADER */}
       <header
         style={{
           padding: "16px 20px",
@@ -138,18 +137,19 @@ export default function Home() {
           {/* TB LOGO */}
           <div
             style={{
-              width: 42,
-              height: 42,
-              borderRadius: 12,
-              background: "#111111",
-              border: "1px solid rgba(255,255,255,0.12)",
+              width: 46,
+              height: 46,
+              borderRadius: 13,
+              background: "#FFD43B",
+              border: "2px solid #FFD43B",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontWeight: 800,
-              fontSize: 17,
-              color: "#ffffff",
-              boxShadow: "0 0 18px rgba(255,193,7,0.08)",
+              fontWeight: 900,
+              fontSize: 18,
+              letterSpacing: "-1px",
+              color: "#050505",
+              boxShadow: "0 0 20px rgba(255,212,59,0.18)",
             }}
           >
             TB
@@ -182,7 +182,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* MAIN CONTENT */}
       <main
         style={{
           flex: 1,
@@ -196,7 +195,6 @@ export default function Home() {
           gap: 16,
         }}
       >
-        {/* AI CONTENT CREATOR */}
         <div
           style={{
             padding: "18px",
@@ -284,16 +282,12 @@ export default function Home() {
               fontWeight: 700,
               fontSize: 15,
               cursor: loading ? "not-allowed" : "pointer",
-              boxShadow: loading
-                ? "none"
-                : "0 4px 18px rgba(255,212,59,0.08)",
             }}
           >
             {loading ? "Please wait..." : "Create Content ✨"}
           </button>
         </div>
 
-        {/* CHAT MESSAGES */}
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -315,10 +309,6 @@ export default function Home() {
                   msg.role === "user"
                     ? "1px solid rgba(255,212,59,0.18)"
                     : "1px solid rgba(255,255,255,0.09)",
-                boxShadow:
-                  msg.role === "user"
-                    ? "0 4px 16px rgba(0,0,0,0.3)"
-                    : "0 3px 12px rgba(0,0,0,0.25)",
                 whiteSpace: "pre-wrap",
                 lineHeight: 1.6,
                 fontSize: 15,
@@ -329,7 +319,6 @@ export default function Home() {
           </div>
         ))}
 
-        {/* THINKING */}
         {loading && (
           <div
             style={{
@@ -355,7 +344,6 @@ export default function Home() {
         <div ref={messagesEndRef} />
       </main>
 
-      {/* INPUT AREA */}
       <div
         style={{
           padding: "16px",
@@ -416,7 +404,6 @@ export default function Home() {
                 loading || !message.trim()
                   ? "not-allowed"
                   : "pointer",
-              transition: "all 0.2s",
               whiteSpace: "nowrap",
             }}
           >

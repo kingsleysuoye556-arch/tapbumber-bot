@@ -145,11 +145,13 @@ marginBottom: 10,
           padding: "14px 18px",
           borderRadius: 14,
           border: "1px solid rgba(255,212,59,0.25)",
-          background: loading || !request.trim() ? "#171717" : "#FFD43B",
+          background:
+            loading || !request.trim() ? "#171717" : "#FFD43B",
           color: loading || !request.trim() ? "#777" : "#050505",
           fontWeight: 800,
           fontSize: 15,
-          cursor: loading || !request.trim() ? "not-allowed" : "pointer",
+          cursor:
+            loading || !request.trim() ? "not-allowed" : "pointer",
         }}
       >
         {loading ? "Creating Design..." : "Create Horticulture Design 🌿"}
@@ -173,8 +175,8 @@ marginBottom: 10,
             fontWeight: 800,
           }}
         >
-          Your <span style={{ color: "#FFD43B" }}>Horticulture Plan</span>{" "}
-          🌱
+          Your{" "}
+          <span style={{ color: "#FFD43B" }}>Horticulture Plan</span> 🌱
         </h2>
 
         <div

@@ -1,0 +1,10 @@
+/* Add this at the top of your globals.css */
+
+body {
+  background-color: #000000 !important;
+  color: white;
+}
+
+html {
+  background-color: #000000;
+}

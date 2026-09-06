@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 
 export default function Home() {
-  const [mode, setMode] = useState("content"); // "content" | "app"
+  const [mode, setMode] = useState("content");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([
     {
@@ -24,7 +24,6 @@ export default function Home() {
     scrollToBottom();
   }, [messages, loading]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -103,7 +102,7 @@ Keep code modern, typed when possible, and ready to copy-paste.`,
         body: JSON.stringify({
           message: trimmed,
           system: systemPrompts[mode],
-          history: newMessages.slice(-12), // keep last 12 messages for context
+          history: newMessages.slice(-12),
         }),
       });
 
@@ -142,9 +141,7 @@ Keep code modern, typed when possible, and ready to copy-paste.`,
     ]);
   }
 
-  // Simple markdown-like rendering for code blocks
   function renderContent(text) {
-    // Split by code blocks
     const parts = text.split(/(```[\s\S]*?```)/g);
 
     return parts.map((part, i) => {
@@ -332,7 +329,9 @@ Keep code modern, typed when possible, and ready to copy-paste.`,
                 lineHeight: 1.55,
               }}
             >
-              {msg.role === "assistant" ? renderContent(msg.content) : msg.content}
+              {msg.role === "assistant"
+                ? renderContent(msg.content)
+                : msg.content}
             </div>
           </div>
         ))}
@@ -348,9 +347,9 @@ Keep code modern, typed when possible, and ready to copy-paste.`,
             }}
           >
             <span>Thinking</span>
-            <span className="dot">.</span>
-            <span className="dot">.</span>
-            <span className="dot">.</span>
+            <span>.</span>
+            <span>.</span>
+            <span>.</span>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -418,7 +417,6 @@ Keep code modern, typed when possible, and ready to copy-paste.`,
               color: loading || !message.trim() ? "#888" : "#000",
               fontWeight: 800,
               cursor: loading || !message.trim() ? "not-allowed" : "pointer",
-              transition: "all 0.2s",
             }}
           >
             {loading ? "..." : "Send"}

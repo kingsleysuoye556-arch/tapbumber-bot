@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 
-export default function TapBombaAI() {
+export default function Home() {
   const [message, setMessage] = useState("");
-  const [chat, setChat] = useState([
+  const [messages, setMessages] = useState([
     {
       role: "assistant",
       content:
@@ -12,131 +12,157 @@ export default function TapBombaAI() {
     },
   ]);
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
-  const chatEndRef = useRef(null);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
-  async function handleSend() {
-    if (!message.trim() || loading) return;
+  async function sendMessage(text) {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
 
-    const userMessage = message.trim();
+    const userMsg = { role: "user", content: trimmed };
+    setMessages((prev) => [...prev, userMsg]);
     setMessage("");
-    setChat((prev) => [...prev, { role: "user", content: userMessage }]);
     setLoading(true);
 
     try {
-      const response = await fetch("/api/tapbomba", {
+      const res = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message: userMessage }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: trimmed }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Something went wrong.");
+      if (res.ok) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.reply || data.response || "No response received.",
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.error || "Something went wrong. Please try again.",
+          },
+        ]);
       }
-
-      setChat((prev) => [
+    } catch (err) {
+      setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: data.reply || "I couldn't generate a response.",
-        },
-      ]);
-    } catch (error) {
-      setChat((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            error instanceof Error
-              ? error.message
-              : "Unable to get a response right now.",
+          content: "Failed to reach the server. Please check your connection.",
         },
       ]);
     } finally {
       setLoading(false);
+      setTimeout(() => textareaRef.current?.focus(), 100);
     }
   }
 
-  function handleKeyDown(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  function handleSubmit(e) {
+    e.preventDefault();
+    sendMessage(message);
+  }
+
+  // Better Create Content button – immediately starts the conversation
+  function handleCreateContent() {
+    if (loading) return;
+    sendMessage(
+      "Help me create professional content for my business. Please ask me what type of content I need (e.g. Instagram posts, captions, ads, product descriptions) and what my business is about."
+    );
   }
 
   return (
-    <main
+    <div
       style={{
         minHeight: "100vh",
-        background: "#050505",
-        color: "#fff",
-        padding: "32px 16px",
+        background: "linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
+        color: "#e2e8f0",
         fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      <div
+      {/* Header */}
+      <header
         style={{
-          maxWidth: 800,
-          margin: "0 auto",
+          padding: "16px 24px",
+          borderBottom: "1px solid rgba(148, 163, 184, 0.15)",
+          background: "rgba(15, 23, 42, 0.8)",
+          backdropFilter: "blur(12px)",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
         }}
       >
-        {/* Header */}
-        <header
+        <div
           style={{
-            textAlign: "center",
-            marginBottom: 32,
+            maxWidth: 800,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
           }}
         >
           <div
             style={{
-              fontSize: 42,
-              marginBottom: 8,
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              background: "linear-gradient(135deg, #22c55e, #16a34a)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 700,
+              fontSize: 18,
+              color: "white",
             }}
           >
-            🚀
+            T
           </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+              TapBomba AI
+            </h1>
+            <p style={{ margin: 0, fontSize: 13, color: "#94a3b8" }}>
+              Automate. Grow. Earn.
+            </p>
+          </div>
+        </div>
+      </header>
 
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 32,
-              fontWeight: 800,
-              letterSpacing: "-0.5px",
-            }}
-          >
-            TapBomba <span style={{ color: "#FFD43B" }}>AI</span>
-          </h1>
-
-          <p
-            style={{
-              marginTop: 8,
-              color: "#fff",
-              opacity: 0.7,
-              fontSize: 16,
-              fontWeight: 500,
-            }}
-          >
-            Automate. Grow. Earn.
-          </p>
-        </header>
-
+      {/* Main */}
+      <main
+        style={{
+          flex: 1,
+          maxWidth: 800,
+          width: "100%",
+          margin: "0 auto",
+          padding: "24px 16px",
+          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
         {/* AI Content Creator Card */}
-        <section
+        <div
           style={{
-            background: "#0D0D0D",
-            border: "1px solid rgba(255,255,255,0.09)",
-            borderRadius: 20,
-            padding: 24,
-            marginBottom: 24,
+            padding: 18,
+            borderRadius: 18,
+            background: "rgba(30, 41, 59, 0.85)",
+            border: "1px solid rgba(34, 197, 94, 0.25)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
           }}
         >
           <div
@@ -144,28 +170,39 @@ export default function TapBombaAI() {
               display: "flex",
               alignItems: "center",
               gap: 10,
-              marginBottom: 12,
+              marginBottom: 8,
             }}
           >
-            <span style={{ fontSize: 24 }}>📝</span>
-            <h2
+            <div
               style={{
-                margin: 0,
-                fontSize: 20,
-                fontWeight: 700,
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                background: "linear-gradient(135deg, #22c55e, #16a34a)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 18,
               }}
             >
-              AI Content Creator
-            </h2>
+              📝
+            </div>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 18, color: "#ffffff" }}>
+                AI Content Creator
+              </h2>
+              <p style={{ margin: "2px 0 0", color: "#94a3b8", fontSize: 12 }}>
+                Create content for your business
+              </p>
+            </div>
           </div>
 
           <p
             style={{
-              margin: "0 0 20px",
-              color: "#fff",
-              opacity: 0.7,
-              lineHeight: 1.6,
-              fontSize: 15,
+              margin: "12px 0",
+              color: "#cbd5e1",
+              fontSize: 14,
+              lineHeight: 1.55,
             }}
           >
             Create social media posts, captions, advertisements, product
@@ -175,149 +212,161 @@ export default function TapBombaAI() {
 
           <button
             type="button"
-            onClick={() =>
-              setMessage(
-                "Create a professional social media post for my business"
-              )
-            }
+            onClick={handleCreateContent}
+            disabled={loading}
             style={{
               width: "100%",
-              padding: "14px 18px",
-              borderRadius: 14,
-              border: "1px solid rgba(255,212,59,0.25)",
-              background: "#FFD43B",
-              color: "#050505",
-              fontWeight: 800,
+              padding: "13px 18px",
+              borderRadius: 12,
+              border: "none",
+              background: loading
+                ? "rgba(34, 197, 94, 0.4)"
+                : "linear-gradient(135deg, #22c55e, #16a34a)",
+              color: "white",
+              fontWeight: 600,
               fontSize: 15,
-              cursor: "pointer",
+              cursor: loading ? "not-allowed" : "pointer",
             }}
           >
-            Create Content ✨
+            {loading ? "Please wait..." : "Create Content ✨"}
           </button>
-        </section>
+        </div>
 
-        {/* Chat Area */}
-        <section
+        {/* Messages */}
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+            }}
+          >
+            <div
+              style={{
+                maxWidth: "85%",
+                padding: "12px 16px",
+                borderRadius: 16,
+                background:
+                  msg.role === "user"
+                    ? "linear-gradient(135deg, #22c55e, #16a34a)"
+                    : "rgba(30, 41, 59, 0.9)",
+                color: msg.role === "user" ? "white" : "#e2e8f0",
+                border:
+                  msg.role === "assistant"
+                    ? "1px solid rgba(148, 163, 184, 0.2)"
+                    : "none",
+                boxShadow:
+                  msg.role === "user"
+                    ? "0 4px 12px rgba(34, 197, 94, 0.25)"
+                    : "0 2px 8px rgba(0,0,0,0.2)",
+                whiteSpace: "pre-wrap",
+                lineHeight: 1.55,
+                fontSize: 15,
+              }}
+            >
+              {msg.content}
+            </div>
+          </div>
+        ))}
+
+        {loading && (
+          <div style={{ display: "flex", justifyContent: "flex-start" }}>
+            <div
+              style={{
+                padding: "12px 16px",
+                borderRadius: 16,
+                background: "rgba(30, 41, 59, 0.9)",
+                border: "1px solid rgba(148, 163, 184, 0.2)",
+                color: "#94a3b8",
+                fontSize: 14,
+              }}
+            >
+              Thinking...
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </main>
+
+      {/* Input */}
+      <div
+        style={{
+          padding: 16,
+          borderTop: "1px solid rgba(148, 163, 184, 0.15)",
+          background: "rgba(15, 23, 42, 0.9)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        <form
+          onSubmit={handleSubmit}
           style={{
-            background: "#0D0D0D",
-            border: "1px solid rgba(255,255,255,0.09)",
-            borderRadius: 20,
-            padding: 20,
+            maxWidth: 800,
+            margin: "0 auto",
             display: "flex",
-            flexDirection: "column",
-            minHeight: 420,
+            gap: 12,
+            alignItems: "flex-end",
           }}
         >
-          {/* Messages */}
-          <div
+          <textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+            placeholder="Ask TapBomba AI anything..."
+            rows={1}
+            disabled={loading}
             style={{
               flex: 1,
-              overflowY: "auto",
-              marginBottom: 16,
-              display: "flex",
-              flexDirection: "column",
-              gap: 14,
+              resize: "none",
+              padding: "14px 16px",
+              borderRadius: 14,
+              border: "1px solid rgba(148, 163, 184, 0.25)",
+              background: "rgba(30, 41, 59, 0.8)",
+              color: "#e2e8f0",
+              fontSize: 15,
+              lineHeight: 1.4,
+              outline: "none",
+              minHeight: 48,
+              maxHeight: 120,
+            }}
+          />
+          <button
+            type="submit"
+            disabled={loading || !message.trim()}
+            style={{
+              padding: "14px 22px",
+              borderRadius: 14,
+              border: "none",
+              background:
+                loading || !message.trim()
+                  ? "rgba(34, 197, 94, 0.4)"
+                  : "linear-gradient(135deg, #22c55e, #16a34a)",
+              color: "white",
+              fontWeight: 600,
+              fontSize: 15,
+              cursor: loading || !message.trim() ? "not-allowed" : "pointer",
             }}
           >
-            {chat.map((msg, index) => (
-              <div
-                key={index}
-                style={{
-                  alignSelf:
-                    msg.role === "user" ? "flex-end" : "flex-start",
-                  maxWidth: "85%",
-                  background:
-                    msg.role === "user" ? "#FFD43B" : "rgba(255,255,255,0.06)",
-                  color: msg.role === "user" ? "#050505" : "#fff",
-                  padding: "12px 16px",
-                  borderRadius: 16,
-                  fontSize: 15,
-                  lineHeight: 1.55,
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {msg.content}
-              </div>
-            ))}
-
-            {loading && (
-              <div
-                style={{
-                  alignSelf: "flex-start",
-                  background: "rgba(255,255,255,0.06)",
-                  color: "#fff",
-                  padding: "12px 16px",
-                  borderRadius: 16,
-                  fontSize: 15,
-                  opacity: 0.7,
-                }}
-              >
-                Thinking...
-              </div>
-            )}
-
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Input Area */}
-          <div>
-            <textarea
-              ref={textareaRef}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask TapBomba AI anything..."
-              rows={3}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                resize: "none",
-                borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "#101010",
-                color: "#fff",
-                padding: 14,
-                fontSize: 15,
-                lineHeight: 1.5,
-                outline: "none",
-                marginBottom: 12,
-              }}
-            />
-
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={loading || !message.trim()}
-              style={{
-                width: "100%",
-                padding: "14px 18px",
-                borderRadius: 14,
-                border: "1px solid rgba(255,212,59,0.25)",
-                background:
-                  loading || !message.trim() ? "#171717" : "#FFD43B",
-                color: loading || !message.trim() ? "#777" : "#050505",
-                fontWeight: 800,
-                fontSize: 15,
-                cursor:
-                  loading || !message.trim() ? "not-allowed" : "pointer",
-              }}
-            >
-              {loading ? "Sending..." : "Send"}
-            </button>
-
-            <p
-              style={{
-                margin: "10px 0 0",
-                fontSize: 12,
-                opacity: 0.45,
-                textAlign: "center",
-              }}
-            >
-              Press Enter to send • Shift + Enter for new line
-            </p>
-          </div>
-        </section>
+            {loading ? "..." : "Send"}
+          </button>
+        </form>
+        <p
+          style={{
+            margin: "10px 0 0",
+            fontSize: 12,
+            opacity: 0.45,
+            textAlign: "center",
+          }}
+        >
+          Press Enter to send • Shift + Enter for new line
+        </p>
       </div>
-    </main>
+    </div>
   );
 }

@@ -3,12 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 
 export default function Home() {
+  const [mode, setMode] = useState("content"); // "content" | "app"
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([
     {
       role: "assistant",
       content:
-        "Hello! I'm Top Bomba AI — your practical business assistant. Ask me anything about business, growth, or earning online.",
+        "Hello! I'm Top Bomba AI. Select a mode above and let's build something amazing.",
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -23,12 +24,75 @@ export default function Home() {
     scrollToBottom();
   }, [messages, loading]);
 
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height =
+        Math.min(textareaRef.current.scrollHeight, 160) + "px";
+    }
+  }, [message]);
+
+  const systemPrompts = {
+    content: `You are Top Bomba AI Content Creator.
+Help Nigerian and African business owners create:
+- Social media posts
+- Captions
+- Ads
+- Product descriptions
+- Promotional messages
+
+Be practical, direct, culturally relevant, and results-focused. Use simple English and local flavor when appropriate.`,
+
+    app: `You are Top Bomba AI App Builder.
+
+When the user wants to build an app:
+
+1. First ask clarifying questions if needed (Web or Mobile? Main features? Preferred tech stack?).
+2. Then generate a complete, working project using:
+   - Next.js 15 (App Router)
+   - Tailwind CSS
+   - Clean, production-ready code
+
+Always structure your reply like this:
+
+### Project Structure
+(list the folders and files)
+
+### package.json
+\`\`\`json
+...
+\`\`\`
+
+### File: app/page.tsx
+\`\`\`tsx
+...
+\`\`\`
+
+(continue for every important file)
+
+### How to run
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+### Deploy to Vercel
+1. Push to GitHub
+2. Import in Vercel
+3. Deploy
+
+Keep code modern, typed when possible, and ready to copy-paste.`,
+  };
+
   async function handleSubmit(e) {
     e.preventDefault();
     const trimmed = message.trim();
     if (!trimmed || loading) return;
 
-    setMessages((prev) => [...prev, { role: "user", content: trimmed }]);
+    const userMsg = { role: "user", content: trimmed };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setMessage("");
     setLoading(true);
 
@@ -36,44 +100,96 @@ export default function Home() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({
+          message: trimmed,
+          system: systemPrompts[mode],
+          history: newMessages.slice(-12), // keep last 12 messages for context
+        }),
       });
-      const data = await res.json();
 
-      if (!res.ok) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: data.error || "Something went wrong. Please try again." },
-        ]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: data.reply || data.response || "No response received." },
-        ]);
-      }
-    } catch (err) {
+      if (!res.ok) throw new Error("API error");
+
+      const data = await res.json();
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Failed to reach the server. Please check your connection." },
+        { role: "assistant", content: data.reply || "No response received." },
+      ]);
+    } catch (err) {
+      console.error(err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Server error. Please try again in a moment.",
+        },
       ]);
     } finally {
       setLoading(false);
-      textareaRef.current?.focus();
     }
   }
 
-  function handleKeyDown(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
+  function switchMode(newMode) {
+    if (newMode === mode) return;
+    setMode(newMode);
+    setMessages([
+      {
+        role: "assistant",
+        content:
+          newMode === "app"
+            ? "🚀 App Builder Mode ON\n\nDescribe the app you want to build.\nExample: “Build a simple POS web app for my provision store with sales tracking and receipt printing”"
+            : "✨ Content Creator Mode ON\n\nWhat content do you need today?\nExample: “Write 5 Instagram captions for my fashion store”",
+      },
+    ]);
   }
 
-  function startContentCreator() {
-    setMessage(
-      "Help me create professional content for my business. Ask me what type of content I want and what my business is about."
-    );
-    setTimeout(() => textareaRef.current?.focus(), 100);
+  // Simple markdown-like rendering for code blocks
+  function renderContent(text) {
+    // Split by code blocks
+    const parts = text.split(/(```[\s\S]*?```)/g);
+
+    return parts.map((part, i) => {
+      if (part.startsWith("```")) {
+        const match = part.match(/```(\w+)?\n?([\s\S]*?)```/);
+        if (match) {
+          const lang = match[1] || "";
+          const code = match[2];
+          return (
+            <pre
+              key={i}
+              style={{
+                background: "#111",
+                border: "1px solid rgba(255,212,59,0.25)",
+                borderRadius: 12,
+                padding: 14,
+                overflowX: "auto",
+                margin: "12px 0",
+                fontSize: 13,
+                lineHeight: 1.5,
+              }}
+            >
+              {lang && (
+                <div
+                  style={{
+                    color: "#FFD43B",
+                    fontSize: 11,
+                    marginBottom: 8,
+                    fontWeight: 600,
+                  }}
+                >
+                  {lang}
+                </div>
+              )}
+              <code>{code}</code>
+            </pre>
+          );
+        }
+      }
+      return (
+        <span key={i} style={{ whiteSpace: "pre-wrap" }}>
+          {part}
+        </span>
+      );
+    });
   }
 
   return (
@@ -81,35 +197,52 @@ export default function Home() {
       style={{
         minHeight: "100vh",
         background: "#000",
-        color: "#ffffff",
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
+        color: "#fff",
+        fontFamily: "system-ui, -apple-system, sans-serif",
         display: "flex",
         flexDirection: "column",
       }}
     >
-      {/* HEADER WITH NEW LOGO */}
+      {/* Header */}
       <header
         style={{
-          padding: "20px",
+          padding: "16px 20px",
           borderBottom: "1px solid rgba(255,212,59,0.2)",
           background: "rgba(0,0,0,0.95)",
-          backdropFilter: "blur(12px)",
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
         }}
       >
-        <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", justifyContent: "center" }}>
-          <img
-            src="/logo.png"
-            alt="Top Bomba AI Logo"
+        <div
+          style={{
+            maxWidth: 800,
+            margin: "0 auto",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <div
             style={{
-              height: 70,
-              width: "auto",
-              objectFit: "contain",
-              filter: "drop-shadow(0 0 15px rgba(255,212,59,0.4))",
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              background: "linear-gradient(135deg, #FFD43B, #FFA500)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 900,
+              fontSize: 22,
+              color: "#000",
             }}
-          />
+          >
+            TB
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 18 }}>Top Bomba AI</div>
+            <div style={{ fontSize: 12, opacity: 0.7 }}>
+              Automate. Grow. Earn.
+            </div>
+          </div>
         </div>
       </header>
 
@@ -119,154 +252,173 @@ export default function Home() {
           maxWidth: 800,
           width: "100%",
           margin: "0 auto",
-          padding: "24px 16px",
+          padding: "20px 16px",
           overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
         }}
       >
-        {/* CONTENT CREATOR CARD */}
+        {/* Mode Switcher */}
         <div
           style={{
-            padding: "18px",
-            borderRadius: 18,
-            background: "#0A0A0A",
-            border: "1px solid rgba(255,212,59,0.25)",
-            boxShadow: "0 8px 30px rgba(255,212,59,0.1)",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 12,
+            marginBottom: 24,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                background: "#111",
-                border: "1px solid rgba(255,212,59,0.4)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 18,
-              }}
-            >
-              ✨
-            </div>
-            <div>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-                AI <span style={{ color: "#FFD43B" }}>Content</span> Creator
-              </h2>
-              <p style={{ margin: "3px 0 0", fontSize: 12, opacity: 0.7 }}>
-                Create content for your business
-              </p>
-            </div>
-          </div>
-
-          <p style={{ margin: "12px 0", opacity: 0.85, fontSize: 14, lineHeight: 1.6 }}>
-            Create social media posts, captions, advertisements, product descriptions, and promotional messages.
-          </p>
-
-          <button
-            type="button"
-            onClick={startContentCreator}
-            disabled={loading}
+          <div
+            onClick={() => switchMode("content")}
             style={{
-              width: "100%",
-              padding: "13px 18px",
-              borderRadius: 12,
-              border: "none",
-              background: loading ? "#222" : "linear-gradient(135deg, #FFD43B 0%, #FFA500 100%)",
-              color: loading ? "#888" : "#000",
-              fontWeight: 800,
-              fontSize: 15,
-              cursor: loading ? "not-allowed" : "pointer",
-              boxShadow: loading ? "none" : "0 0 25px rgba(255,212,59,0.4)",
+              padding: 16,
+              borderRadius: 16,
+              cursor: "pointer",
+              background:
+                mode === "content"
+                  ? "linear-gradient(135deg, #FFD43B 0%, #FFA500 100%)"
+                  : "#0A0A0A",
+              border: "1px solid rgba(255,212,59,0.3)",
+              color: mode === "content" ? "#000" : "#fff",
+              transition: "all 0.2s",
             }}
           >
-            {loading ? "Please wait..." : "Create Content ✨"}
-          </button>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>
+              ✨ Content Creator
+            </h3>
+            <p style={{ margin: "4px 0 0", fontSize: 12, opacity: 0.85 }}>
+              Posts • Ads • Captions
+            </p>
+          </div>
+
+          <div
+            onClick={() => switchMode("app")}
+            style={{
+              padding: 16,
+              borderRadius: 16,
+              cursor: "pointer",
+              background:
+                mode === "app"
+                  ? "linear-gradient(135deg, #FFD43B 0%, #FFA500 100%)"
+                  : "#0A0A0A",
+              border: "1px solid rgba(255,212,59,0.3)",
+              color: mode === "app" ? "#000" : "#fff",
+              transition: "all 0.2s",
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>
+              🚀 App Builder
+            </h3>
+            <p style={{ margin: "4px 0 0", fontSize: 12, opacity: 0.85 }}>
+              Full App Code + Deploy
+            </p>
+          </div>
         </div>
 
-        {/* CHAT MESSAGES */}
+        {/* Messages */}
         {messages.map((msg, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+              marginBottom: 14,
+            }}
+          >
             <div
               style={{
-                maxWidth: "85%",
+                maxWidth: "88%",
                 padding: "12px 16px",
                 borderRadius: 16,
                 background: msg.role === "user" ? "#151515" : "#0A0A0A",
-                border: msg.role === "user" ? "1px solid rgba(255,212,59,0.3)" : "1px solid rgba(255,212,59,0.15)",
-                whiteSpace: "pre-wrap",
-                lineHeight: 1.6,
-                fontSize: 15,
+                border: "1px solid rgba(255,212,59,0.2)",
+                lineHeight: 1.55,
               }}
             >
-              {msg.content}
+              {msg.role === "assistant" ? renderContent(msg.content) : msg.content}
             </div>
           </div>
         ))}
 
         {loading && (
-          <div style={{ display: "flex", justifyContent: "flex-start" }}>
-            <div style={{ padding: "12px 16px", borderRadius: 16, background: "#0A0A0A", border: "1px solid rgba(255,212,59,0.15)", color: "#FFD43B" }}>
-              Thinking...
-            </div>
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              padding: "8px 0",
+              color: "#FFD43B",
+              fontSize: 14,
+            }}
+          >
+            <span>Thinking</span>
+            <span className="dot">.</span>
+            <span className="dot">.</span>
+            <span className="dot">.</span>
           </div>
         )}
-
         <div ref={messagesEndRef} />
       </main>
 
-      {/* INPUT */}
+      {/* Input */}
       <div
         style={{
           padding: "16px",
           borderTop: "1px solid rgba(255,212,59,0.2)",
           background: "rgba(0,0,0,0.97)",
-          backdropFilter: "blur(12px)",
         }}
       >
         <form
           onSubmit={handleSubmit}
-          style={{ maxWidth: 800, margin: "0 auto", display: "flex", gap: 10, alignItems: "flex-end" }}
+          style={{
+            maxWidth: 800,
+            margin: "0 auto",
+            display: "flex",
+            gap: 10,
+            alignItems: "flex-end",
+          }}
         >
           <textarea
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask Top Bomba AI anything..."
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+            placeholder={
+              mode === "app"
+                ? "Describe the app you want to build..."
+                : "Ask for content ideas..."
+            }
             rows={1}
             disabled={loading}
             style={{
               flex: 1,
-              resize: "none",
               padding: "14px 16px",
               borderRadius: 14,
               border: "1px solid rgba(255,212,59,0.3)",
               background: "#0F0F0F",
-              color: "#ffffff",
+              color: "#fff",
               fontSize: 15,
+              resize: "none",
               outline: "none",
-              minHeight: 48,
-              maxHeight: 120,
-              caretColor: "#FFD43B",
+              maxHeight: 160,
             }}
           />
           <button
             type="submit"
             disabled={loading || !message.trim()}
             style={{
-              padding: "14px 20px",
+              padding: "14px 22px",
               borderRadius: 14,
               border: "none",
-              background: loading || !message.trim() ? "#222" : "linear-gradient(135deg, #FFD43B 0%, #FFA500 100%)",
-              color: loading || !message.trim() ? "#777" : "#000",
+              background:
+                loading || !message.trim()
+                  ? "#333"
+                  : "linear-gradient(135deg, #FFD43B 0%, #FFA500 100%)",
+              color: loading || !message.trim() ? "#888" : "#000",
               fontWeight: 800,
-              fontSize: 15,
               cursor: loading || !message.trim() ? "not-allowed" : "pointer",
-              boxShadow: loading || !message.trim() ? "none" : "0 0 20px rgba(255,212,59,0.3)",
+              transition: "all 0.2s",
             }}
           >
             {loading ? "..." : "Send"}

@@ -19,7 +19,9 @@ try {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ request: request.trim() }),
+    body: JSON.stringify({
+      request: request.trim(),
+    }),
   });
 
   const data = await response.json();
@@ -31,7 +33,9 @@ try {
   setResult(data.result || "No design result was received.");
 } catch (error) {
   setResult(
-    error instanceof Error ? error.message : "Unable to create design."
+    error instanceof Error
+      ? error.message
+      : "Unable to create design."
   );
 } finally {
   setLoading(false);
@@ -89,8 +93,8 @@ marginBottom: 10,
           lineHeight: 1.6,
         }}
       >
-        Design beautiful flower and plant landscapes for houses, buildings,
-        gardens, and outdoor spaces.
+        Design beautiful flower and plant landscapes for houses,
+        buildings, gardens, and outdoor spaces.
       </p>
     </header>
 
@@ -147,14 +151,17 @@ marginBottom: 10,
           border: "1px solid rgba(255,212,59,0.25)",
           background:
             loading || !request.trim() ? "#171717" : "#FFD43B",
-          color: loading || !request.trim() ? "#777" : "#050505",
+          color:
+            loading || !request.trim() ? "#777" : "#050505",
           fontWeight: 800,
           fontSize: 15,
           cursor:
             loading || !request.trim() ? "not-allowed" : "pointer",
         }}
       >
-        {loading ? "Creating Design..." : "Create Horticulture Design 🌿"}
+        {loading
+          ? "Creating Design..."
+          : "Create Horticulture Design 🌿"}
       </button>
     </section>
 
@@ -176,7 +183,10 @@ marginBottom: 10,
           }}
         >
           Your{" "}
-          <span style={{ color: "#FFD43B" }}>Horticulture Plan</span> 🌱
+          <span style={{ color: "#FFD43B" }}>
+            Horticulture Plan
+          </span>{" "}
+          🌱
         </h2>
 
         <div
